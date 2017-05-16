@@ -25,20 +25,20 @@ class SNMPRequest {
     char* communityString;
     int version;
     ASN_TYPE requestType;
-    int requestID;
+    unsigned long requestID;
     int errorStatus;
     int errorIndex;
     VarBindList* varBinds = 0;
     VarBindList* varBindsCursor = 0;
     
     ComplexType* SNMPPacket;
-    bool parseFrom(char* buf);
+    bool parseFrom(unsigned char* buf);
     bool serialise(char* buf);
     enum SNMPExpect EXPECTING = SNMPVERSION;
     bool isCorrupt = false;
 };
 
-bool SNMPRequest::parseFrom(char* buf){
+bool SNMPRequest::parseFrom(unsigned char* buf){
     SNMPPacket = new ComplexType(STRUCTURE);
     if(buf[0] != 0x30) {
         isCorrupt = true;
@@ -119,6 +119,7 @@ bool SNMPRequest::parseFrom(char* buf){
                     cursor = cursor->next;
                     EXPECTING = ERRORID;
                 } else {
+                    Serial.println("Sup9");
                     isCorrupt = true;
                     return false;
                 }

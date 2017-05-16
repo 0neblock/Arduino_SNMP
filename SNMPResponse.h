@@ -37,7 +37,7 @@ class SNMPResponse {
     }
     int version = 0;
     char communityString[20];
-    int requestID = 0;
+    unsigned long requestID = 0;
     
     ERROR_STATUS errorStatus = (ERROR_STATUS)0;
     int errorIndex = 0;
@@ -48,7 +48,7 @@ class SNMPResponse {
     
     bool addResponse(SNMPOIDResponse* response);
     bool addErrorResponse(SNMPOIDResponse* response, int index);
-    int serialise(char* buf);
+    int serialise(unsigned char* buf);
     
   private:
     ComplexType* response = 0;
@@ -75,7 +75,7 @@ bool SNMPResponse::addErrorResponse(SNMPOIDResponse* response, int index){
 
 
 
-int SNMPResponse::serialise(char* buf){
+int SNMPResponse::serialise(unsigned char* buf){
     if(build()){
         return response->serialise(buf);
     }

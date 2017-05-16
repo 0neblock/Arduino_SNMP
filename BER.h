@@ -32,8 +32,8 @@ class BER_CONTAINER {
     bool _isPrimative;
     ASN_TYPE _type;
     unsigned short _length;
-    virtual int serialise(char* buf) =0;
-    virtual bool fromBuffer(char* buf) = 0;
+    virtual int serialise(unsigned char* buf) =0;
+    virtual bool fromBuffer(unsigned char* buf) = 0;
     virtual int getLength() = 0;
 };
 
@@ -42,15 +42,15 @@ class BER_CONTAINER {
 class IntegerType: public BER_CONTAINER {
   public:
     IntegerType(): BER_CONTAINER(true, INTEGER){};
-    IntegerType(int value): _value(value), BER_CONTAINER(true, INTEGER){};
+    IntegerType(unsigned long value): _value(value), BER_CONTAINER(true, INTEGER){};
     ~IntegerType(){};
-    int _value;
-    int serialise(char* buf){
+    unsigned long _value;
+    int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value. we return the length of the entire block (TL&V) ni bytes;
-        char* ptr = buf;
+        unsigned char* ptr = buf;
         *ptr = _type;
         ptr++;
-        char* lengthPtr = ptr++;
+        unsigned char* lengthPtr = ptr++;
         if(_value != 0){
             _length = 4; // FIXME: need to give this dynamic length
         //        while(_length > 1){
@@ -74,7 +74,7 @@ class IntegerType: public BER_CONTAINER {
         *lengthPtr = _length;
         return _length + 2;
     }
-    bool fromBuffer(char* buf){
+    bool fromBuffer(unsigned char* buf){
         buf++;// skip Type
         _length = *buf;
         buf++;
@@ -102,21 +102,21 @@ class OctetType: public BER_CONTAINER {
     };
     ~OctetType(){};
     char _value[40];
-    int serialise(char* buf){
+    int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
-        char* ptr = buf;
+        char* ptr = (char*)buf;
         *ptr = _type;
         ptr++;
         _length = sprintf(ptr + 1, "%s", _value);
         *ptr = _length;
         return _length + 2;
     }
-    bool fromBuffer(char* buf){
+    bool fromBuffer(unsigned char* buf){
         buf++;// skip Type
         _length = *buf;
         buf++;
         memset(_value, 0, 40);
-        strncpy(_value, buf, _length);
+        strncpy(_value, (char*)buf, _length);
         return true;
     }
     
@@ -133,9 +133,9 @@ class OIDType: public BER_CONTAINER {
     };
     ~OIDType(){};
     char _value[40];
-    int serialise(char* buf){
+    int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
-        char* ptr = buf;
+        char* ptr = (char*)buf;
         *ptr = _type;
         ptr++;
         char* lengthPtr = ptr;
@@ -168,7 +168,7 @@ class OIDType: public BER_CONTAINER {
         
         return _length;
     }
-    bool fromBuffer(char* buf){
+    bool fromBuffer(unsigned char* buf){
         buf++;// skip Type
         _length = *buf;
         buf++;
@@ -207,7 +207,7 @@ class OIDType: public BER_CONTAINER {
             }
             delay(1);
         }
-//        //Serial.print("OID: " );//Serial.println(_value);
+        Serial.print("OID: " );Serial.println(_value);
 //        memcpy(_value, buf, _length);
         return true;
     }
@@ -223,15 +223,15 @@ class NullType: public BER_CONTAINER {
     ~NullType(){
     };
     char _value = NULL;
-    int serialise(char* buf){
+    int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
-        char* ptr = buf;
+        char* ptr = (char*)buf;
         *ptr = _type;
         ptr++;
         *ptr = 0;
         return 2;
     }
-    bool fromBuffer(char* buf){
+    bool fromBuffer(unsigned char* buf){
         _length = 0;
         return true;
     }
@@ -257,7 +257,7 @@ class ComplexType: public BER_CONTAINER {
         delete _values;
     }
     ValuesList* _values = 0;
-    bool fromBuffer(char* buf){
+    bool fromBuffer(unsigned char* buf){
         // the buffer we get passed in is the complete ASN Container, including the type header.
         buf++; // Skip our own type
         _length = *buf;
@@ -319,12 +319,12 @@ class ComplexType: public BER_CONTAINER {
         return true;
     }
     
-    int serialise(char* buf){
+    int serialise(unsigned char* buf){
         int actualLength = 0;
-        char* ptr = buf;
+        unsigned char* ptr = buf;
         *ptr = _type;
         ptr++;
-        char* lengthPtr = ptr++;
+        unsigned char* lengthPtr = ptr++;
         *lengthPtr = 0;
         ValuesList* conductor = _values;
         while(conductor){
@@ -341,8 +341,8 @@ class ComplexType: public BER_CONTAINER {
               // second is actualLength % 128;
             *lengthPtr = 129;
             // lets move everything right one byte, start from back..
-            char* endPtrPos = ptr + 1;
-            for(char* i = endPtrPos; i > buf +1; i--){
+            unsigned char* endPtrPos = ptr + 1;
+            for(unsigned char* i = endPtrPos; i > buf +1; i--){
                 // i is the char we are moving INTO
                 *i = *(i - 1);
             }

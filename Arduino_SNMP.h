@@ -5,6 +5,8 @@
     #define UDP_TX_PACKET_MAX_SIZE 256
 #endif
 
+#define SNMP_PACKET_LENGTH 256
+
 #include <UDP.h>
 
 #include "BER.h"
@@ -54,7 +56,7 @@ class SNMPAgent {
         bool loop();
     private:
         UDP* _udp;
-        char _packetBuffer[UDP_TX_PACKET_MAX_SIZE];
+        unsigned char _packetBuffer[SNMP_PACKET_LENGTH];
         bool inline receivePacket(int length);
 };
 
@@ -73,9 +75,16 @@ bool SNMPAgent::loop(){
 
 bool inline SNMPAgent::receivePacket(int packetLength){
     if(!packetLength) return false;
-//    Serial.printf("Received %i from: ", packetLength);Serial.println(_udp->remoteIP());
-    memset(_packetBuffer, 0, UDP_TX_PACKET_MAX_SIZE);
-    int len = _udp->read(_packetBuffer, UDP_TX_PACKET_MAX_SIZE);
+//    Serial.print("Received from: ");Serial.print(packetLength);Serial.print(" ");Serial.println(_udp->remoteIP());
+    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
+    int len = packetLength;
+//    int len = _udp->read(_packetBuffer, SNMP_PACKET_LENGTH);
+    for(int i = 0; i < len; i++){
+        _packetBuffer[i] = _udp->read();
+//        Serial.print(_packetBuffer[i], HEX);
+//        Serial.print(" ");
+    }
+    Serial.println();
     _udp->flush();
     _packetBuffer[len] = 0;
 //    Serial.println(_packetBuffer);
@@ -143,19 +152,18 @@ bool inline SNMPAgent::receivePacket(int packetLength){
             }
             varBindIndex++;
         }
-        //Serial.println("Sending UDP");
-        char buf[400];
-        memset(buf, 0, 400);
+//        Serial.println("Sending UDP");
+         memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
         delay(1);
-        int length = response->serialise(buf);
+        int length = response->serialise(_packetBuffer);
         //Serial.print("Serialised into length: ");//Serial.println(length);
         delay(1);
         _udp->beginPacket(_udp->remoteIP(), _udp->remotePort());
-        _udp->write((unsigned char*)buf, length);
+        _udp->write(_packetBuffer, length);
         if(!_udp->endPacket()){
             Serial.println("COULDN'T SEND PACKET");
             for(int i = 0;  i < length; i++){
-                Serial.print(buf[i], HEX);
+                Serial.print(_packetBuffer[i], HEX);
             }
             Serial.print("Length: ");Serial.println(length);
             Serial.print("Length of incoming: ");Serial.println(len);
@@ -214,7 +222,8 @@ ValueCallback* SNMPAgent::findCallback(char* oid, bool next){
                 break;
             }
         }
-        // if we get here and next is true, we give back the reference to the first value (this is the sart of an snmpwalk)
+        // if we get here and next is true, we give back the reference to the first value (this is the start of an snmpwalk)
+        // TODO: act more like a real SNMPWalk - if 1.3.6.1.4.1.9 is called, and we have 9.1, find the 9.1. (at the moment it just spits back the first OID we have)
         if(next){
             return callbacks->value;
         }
