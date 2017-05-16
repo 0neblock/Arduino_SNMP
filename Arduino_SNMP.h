@@ -1,6 +1,12 @@
 #ifndef SNMPAgent_h
 #define SNMPAgent_h
 
+#ifndef UDP_TX_PACKET_MAX_SIZE
+    #define UDP_TX_PACKET_MAX_SIZE 256
+#endif
+
+#include <UDP.h>
+
 #include "BER.h"
 #include "VarBinds.h"
 #include "SNMPRequest.h"
