@@ -2,8 +2,8 @@
 #include <WiFiUdp.h>
 #include <Arduino_SNMP.h>
 
-const char* ssid = "Fusion";
-const char* password = "1357902468";
+const char* ssid = "SSID";
+const char* password = "PASSWORD";
 
 WiFiUDP udp;
 SNMPAgent snmp = SNMPAgent("public");
