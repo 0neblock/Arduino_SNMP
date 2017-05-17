@@ -98,10 +98,10 @@ class OctetType: public BER_CONTAINER {
   public:
     OctetType(): BER_CONTAINER(true, STRING){};
     OctetType(char* value): BER_CONTAINER(true, STRING){
-        strncpy(_value, value, 40);
+        strncpy(_value, value, 25);
     };
     ~OctetType(){};
-    char _value[40];
+    char _value[25];
     int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
         char* ptr = (char*)buf;
@@ -115,7 +115,7 @@ class OctetType: public BER_CONTAINER {
         buf++;// skip Type
         _length = *buf;
         buf++;
-        memset(_value, 0, 40);
+        memset(_value, 0, 25);
         strncpy(_value, (char*)buf, _length);
         return true;
     }
@@ -129,10 +129,10 @@ class OIDType: public BER_CONTAINER {
   public:
     OIDType(): BER_CONTAINER(true, OID){};
     OIDType(char* value): BER_CONTAINER(true, OID){
-        strncpy(_value, value, 40);
+        strncpy(_value, value, 25);
     };
     ~OIDType(){};
-    char _value[40];
+    char _value[25];
     int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
         char* ptr = (char*)buf;
@@ -173,7 +173,7 @@ class OIDType: public BER_CONTAINER {
         _length = *buf;
         buf++;
         buf++;
-        memset(_value, 0, 40);
+        memset(_value, 0, 25);
         _value[0] = '.';
         _value[1] = '1';
         _value[2] = '.';

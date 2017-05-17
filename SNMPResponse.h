@@ -36,7 +36,7 @@ class SNMPResponse {
         delete response; response = 0;
     }
     int version = 0;
-    char communityString[20];
+    char communityString[15];
     unsigned long requestID = 0;
     
     ERROR_STATUS errorStatus = (ERROR_STATUS)0;
