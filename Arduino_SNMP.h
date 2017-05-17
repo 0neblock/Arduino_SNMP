@@ -2,10 +2,10 @@
 #define SNMPAgent_h
 
 #ifndef UDP_TX_PACKET_MAX_SIZE
-    #define UDP_TX_PACKET_MAX_SIZE 256
+    #define UDP_TX_PACKET_MAX_SIZE 128
 #endif
 
-#define SNMP_PACKET_LENGTH 256
+#define SNMP_PACKET_LENGTH 128
 
 #include <UDP.h>
 
@@ -17,7 +17,7 @@
 class ValueCallback {
   public:
     ValueCallback(ASN_TYPE atype): type(atype){};
-    char OID[50];
+    char* OID;
     ASN_TYPE type;
 };
 
@@ -31,7 +31,7 @@ class IntegerCallback: public ValueCallback {
 class StringCallback: public ValueCallback {
   public:
     StringCallback(): ValueCallback(STRING){};
-    char* value;
+    char** value;
 };
 
 typedef struct ValueCallbackList {
@@ -48,12 +48,15 @@ class SNMPAgent {
 //        bool addHandler(char* OID, SNMPOIDResponse (*callback)(SNMPOIDResponse* response, char* oid));
         ValueCallback* findCallback(char* oid, bool next);
         float* addFloatHandler(char* oid, float* value); // this obv just adds integer but with the *0.1 set
-        char* addStringHandler(char*, char*);
+        char** addStringHandler(char*, char**); // passing in a pointer to a char* 
         int* addIntegerHandler(char* oid, int* value);
         void addHandler(ValueCallback* callback);
         bool setUDP(UDP* udp);
         bool begin();
+        bool begin(char*);
         bool loop();
+        char oidPrefix[30];
+        char OIDBuf[50];
     private:
         UDP* _udp;
         unsigned char _packetBuffer[SNMP_PACKET_LENGTH];
@@ -67,6 +70,12 @@ bool SNMPAgent::setUDP(UDP* udp){
 bool SNMPAgent::begin(){
     if(!_udp) return false;
     _udp->begin(161);
+}
+
+bool SNMPAgent::begin(char* prefix){
+    if(!_udp) return false;
+    _udp->begin(161);
+    strncpy(oidPrefix, prefix, 30);
 }
 
 bool SNMPAgent::loop(){
@@ -100,7 +109,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
         
         SNMPResponse* response = new SNMPResponse();
         response->requestID = snmprequest->requestID;
-        strncpy(response->communityString, snmprequest->communityString, 20);
+        strncpy(response->communityString, snmprequest->communityString, 15);
         int varBindIndex = 1;
         snmprequest->varBindsCursor = snmprequest->varBinds;
         while(true){
@@ -117,7 +126,11 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                 SNMPOIDResponse* OIDResponse = new SNMPOIDResponse();
                 OIDResponse->errorStatus = (ERROR_STATUS)0;
                 
-                OIDResponse->oid = new OIDType(callback->OID);
+                memset(OIDBuf, 0, 50);
+                strcat(OIDBuf, oidPrefix);
+                strcat(OIDBuf, callback->OID);
+                
+                OIDResponse->oid = new OIDType(OIDBuf);
                 OIDResponse->type = callback->type;
                 if(callback->type == INTEGER){
                     IntegerType* value = new IntegerType();
@@ -129,7 +142,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                     }
                     OIDResponse->value = value;
                 } else if(callback->type == STRING){
-                    OctetType* value = new OctetType(((StringCallback*)callback)->value);
+                    OctetType* value = new OctetType(*((StringCallback*)callback)->value);
                     OIDResponse->value = value;
                 }
                 response->addResponse(OIDResponse);
@@ -201,14 +214,25 @@ bool inline SNMPAgent::receivePacket(int packetLength){
 ValueCallback* SNMPAgent::findCallback(char* oid, bool next){
     bool useNext = false;
     callbacksCursor = callbacks;
+    
     if(callbacksCursor->value){
         while(true){
             if(!useNext){
-                if(strcmp(callbacksCursor->value->OID, oid) == 0){
-                    // found
+                memset(OIDBuf, 0, 50);
+                strcat(OIDBuf, oidPrefix);
+                strcat(OIDBuf, callbacksCursor->value->OID);
+                if(strcmp(OIDBuf, oid) == 0){
+                    //  found
                     if(next){
                         useNext = true;
                     } else {
+                        return callbacksCursor->value;
+                    }
+                } else if(next){
+                    // doesn't match, lets do a strstr to find out if it's possible for a walk
+                    
+                    
+                    if(strstr(OIDBuf, oid)){ // this is the first occurance of the ENTIRE requested OID, which means it's the start of a walk, lets start here
                         return callbacksCursor->value;
                     }
                 }
@@ -224,16 +248,17 @@ ValueCallback* SNMPAgent::findCallback(char* oid, bool next){
         }
         // if we get here and next is true, we give back the reference to the first value (this is the start of an snmpwalk)
         // TODO: act more like a real SNMPWalk - if 1.3.6.1.4.1.9 is called, and we have 9.1, find the 9.1. (at the moment it just spits back the first OID we have)
-        if(next){
-            return callbacks->value;
-        }
+//        if(next){
+//            return callbacks->value;
+//        }
     }
     
     return 0;
 }
 
-char* SNMPAgent::addStringHandler(char* oid, char* value){
+char** SNMPAgent::addStringHandler(char* oid, char** value){
     ValueCallback* callback = new StringCallback();
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((StringCallback*)callback)->value = value;
     addHandler(callback);
@@ -242,6 +267,7 @@ char* SNMPAgent::addStringHandler(char* oid, char* value){
 
 int* SNMPAgent::addIntegerHandler(char* oid, int* value){
     ValueCallback* callback = new IntegerCallback();
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((IntegerCallback*)callback)->value = value;
     ((IntegerCallback*)callback)->isFloat = false;
@@ -251,6 +277,7 @@ int* SNMPAgent::addIntegerHandler(char* oid, int* value){
 
 float* SNMPAgent::addFloatHandler(char* oid, float* value){
     ValueCallback* callback = new IntegerCallback();
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((IntegerCallback*)callback)->value = (int*)value;
     ((IntegerCallback*)callback)->isFloat = true;
