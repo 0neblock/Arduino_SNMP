@@ -2,10 +2,12 @@
 #define SNMPAgent_h
 
 #ifndef UDP_TX_PACKET_MAX_SIZE
-    #define UDP_TX_PACKET_MAX_SIZE 128
+    #define UDP_TX_PACKET_MAX_SIZE 256
 #endif
 
-#define SNMP_PACKET_LENGTH 128
+#ifndef SNMP_PACKET_LENGTH
+    #define SNMP_PACKET_LENGTH 256
+#endif
 
 #include <UDP.h>
 
@@ -19,6 +21,7 @@ class ValueCallback {
     ValueCallback(ASN_TYPE atype): type(atype){};
     char* OID;
     ASN_TYPE type;
+    bool isSettable = false;
 };
 
 class IntegerCallback: public ValueCallback {
@@ -28,6 +31,12 @@ class IntegerCallback: public ValueCallback {
     bool isFloat = false;
 };
 
+class TimestampCallback: public ValueCallback {
+  public:
+    TimestampCallback(): ValueCallback(TIMESTAMP){};
+    int* value;
+};
+
 class StringCallback: public ValueCallback {
   public:
     StringCallback(): ValueCallback(STRING){};
@@ -35,9 +44,14 @@ class StringCallback: public ValueCallback {
 };
 
 typedef struct ValueCallbackList {
+    ~ValueCallbackList(){
+        delete next;
+    }
     ValueCallback* value;
     struct ValueCallbackList* next = 0;
 } ValueCallbacks;
+
+#include "SNMPTrap.h"
 
 class SNMPAgent {
     public:
@@ -47,24 +61,44 @@ class SNMPAgent {
         ValueCallbacks* callbacksCursor = callbacks;
 //        bool addHandler(char* OID, SNMPOIDResponse (*callback)(SNMPOIDResponse* response, char* oid));
         ValueCallback* findCallback(char* oid, bool next);
-        float* addFloatHandler(char* oid, float* value); // this obv just adds integer but with the *0.1 set
-        char** addStringHandler(char*, char**); // passing in a pointer to a char* 
-        int* addIntegerHandler(char* oid, int* value);
-        void addHandler(ValueCallback* callback);
+        ValueCallback* addFloatHandler(char* oid, float* value, bool isSettable = false); // this obv just adds integer but with the *0.1 set
+        ValueCallback* addStringHandler(char*, char**, bool isSettable = false); // passing in a pointer to a char* 
+        ValueCallback* addIntegerHandler(char* oid, int* value, bool isSettable = false);
+        ValueCallback* addTimestampHandler(char* oid, int* value, bool isSettable = false);
+        
         bool setUDP(UDP* udp);
         bool begin();
         bool begin(char*);
         bool loop();
-        char oidPrefix[30];
+        char oidPrefix[40];
         char OIDBuf[50];
-    private:
+        bool setOccurred = false;
+        void resetSetOccurred(){
+            setOccurred = false;
+        }
         UDP* _udp;
+        bool removeHandler(ValueCallback* callback);
+    private:
+        
+        void addHandler(ValueCallback* callback);
         unsigned char _packetBuffer[SNMP_PACKET_LENGTH];
         bool inline receivePacket(int length);
+        SNMPOIDResponse* generateErrorResponse(ERROR_STATUS error, char* oid){
+            SNMPOIDResponse* errorResponse = new SNMPOIDResponse();
+            errorResponse->oid = new OIDType(oid);
+            errorResponse->errorStatus = error;
+            errorResponse->value = new NullType();
+            errorResponse->type = NULLTYPE;
+            return errorResponse;
+        }
 };
 
 bool SNMPAgent::setUDP(UDP* udp){
+    if(_udp){
+        _udp->stop();
+    }
     _udp = udp;
+    this->begin();
 }
 
 bool SNMPAgent::begin(){
@@ -73,12 +107,14 @@ bool SNMPAgent::begin(){
 }
 
 bool SNMPAgent::begin(char* prefix){
-    if(!_udp) return false;
-    _udp->begin(161);
-    strncpy(oidPrefix, prefix, 30);
+    strncpy(oidPrefix, prefix, 40);
+    return this->begin();
 }
 
 bool SNMPAgent::loop(){
+    if(!_udp){
+        return false;
+    }
     receivePacket(_udp->parsePacket());
 }
 
@@ -101,8 +137,8 @@ bool inline SNMPAgent::receivePacket(int packetLength){
     if(snmprequest->parseFrom(_packetBuffer)){
         
         // check version and community
-        if(snmprequest->version != 1 || strcmp("public", snmprequest->communityString) != 0) {
-            Serial.println("Invalid community or version");
+        if(snmprequest->version != 1 || strcmp(_community, snmprequest->communityString) != 0) {
+            Serial.println(F("Invalid community or version"));
             delete snmprequest;
             return false;
         }
@@ -122,7 +158,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                 walk = true;
             }
             ValueCallback* callback = findCallback(snmprequest->varBindsCursor->value->oid->_value, walk);
-            if(callback){
+            if(callback){ // this is where we deal with the response varbind
                 SNMPOIDResponse* OIDResponse = new SNMPOIDResponse();
                 OIDResponse->errorStatus = (ERROR_STATUS)0;
                 
@@ -132,28 +168,76 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                 
                 OIDResponse->oid = new OIDType(OIDBuf);
                 OIDResponse->type = callback->type;
-                if(callback->type == INTEGER){
-                    IntegerType* value = new IntegerType();
-                    if(!((IntegerCallback*)callback)->isFloat){
-                        value->_value = *(((IntegerCallback*)callback)->value);
-//                        //Serial.println(value->_value);
+                
+                // TODO: this whole thing needs better flow: proper checking for errors etc.
+                
+                if(snmprequest->requestType == SetRequestPDU){
+                    // settable data..
+                    if(callback->isSettable){
+                        if(callback->type != snmprequest->varBindsCursor->value->type){
+                            // wrong data type to set..
+                            // BAD_VALUE
+                            Serial.println(F("VALUE-TYPE DOES NOT MATCH")); 
+                            SNMPOIDResponse* errorResponse = generateErrorResponse(BAD_VALUE, snmprequest->varBindsCursor->value->oid->_value);
+                            response->addErrorResponse(errorResponse, varBindIndex);
+                        } else {
+                            // actually set it
+                            switch(callback->type){
+                                case STRING:
+                                    {
+                                        memcpy(*((StringCallback*)callback)->value, String(((OctetType*)snmprequest->varBindsCursor->value->value)->_value).c_str(), 25);// FIXME: this is VERY dangerous, i'm assuming the length of the source char*, this needs to change. for some reason strncpy didnd't work, need to look into this. the '25' also needs to be defined somewhere so this won't break;
+                                        *(*((StringCallback*)callback)->value + 24) = 0x0; // close off the dest string, temporary
+                                        OctetType* value = new OctetType(*((StringCallback*)callback)->value);
+                                        OIDResponse->value = value;
+                                        setOccurred = true;
+                                    }
+                                break;
+                                case INTEGER:
+                                    {
+                                        IntegerType* value = new IntegerType();
+                                        if(!((IntegerCallback*)callback)->isFloat){
+                                            *(((IntegerCallback*)callback)->value) = ((IntegerType*)snmprequest->varBindsCursor->value->value)->_value;
+                                            value->_value = *(((IntegerCallback*)callback)->value);
+                                        } else {
+                                            *(((IntegerCallback*)callback)->value) = (float)(((IntegerType*)snmprequest->varBindsCursor->value->value)->_value / 10);
+                                            value->_value = *(float*)(((IntegerCallback*)callback)->value) * 10;
+                                        }
+                                        OIDResponse->value = value;
+                                        setOccurred = true;
+                                    }
+                                break;
+                            }
+                            response->addResponse(OIDResponse);
+                        }
                     } else {
-                        value->_value = *(float*)(((IntegerCallback*)callback)->value) * 10;
+                        // not settable, send error
+                        Serial.println(F("OID NOT SETTABLE")); 
+                        SNMPOIDResponse* errorResponse = generateErrorResponse(READ_ONLY, snmprequest->varBindsCursor->value->oid->_value);
+                        response->addErrorResponse(errorResponse, varBindIndex);
                     }
-                    OIDResponse->value = value;
-                } else if(callback->type == STRING){
-                    OctetType* value = new OctetType(*((StringCallback*)callback)->value);
-                    OIDResponse->value = value;
+                } else if(snmprequest->requestType == GetRequestPDU || snmprequest->requestType == GetNextRequestPDU){
+                
+                    if(callback->type == INTEGER){
+                        IntegerType* value = new IntegerType();
+                        if(!((IntegerCallback*)callback)->isFloat){
+                            value->_value = *(((IntegerCallback*)callback)->value);
+                        } else {
+                            value->_value = *(float*)(((IntegerCallback*)callback)->value) * 10;
+                        }
+                        OIDResponse->value = value;
+                    } else if(callback->type == STRING){
+                        OctetType* value = new OctetType(*((StringCallback*)callback)->value);
+                        OIDResponse->value = value;
+                    } else if(callback->type == TIMESTAMP){
+                        TimestampType* value = new TimestampType(*(((TimestampCallback*)callback)->value));
+                        OIDResponse->value = value;
+                    }
+                    response->addResponse(OIDResponse);
                 }
-                response->addResponse(OIDResponse);
             } else {
                 // inject a NoSuchObject error
-                Serial.println("OID NOT FOUND"); 
-                SNMPOIDResponse* errorResponse = new SNMPOIDResponse();
-                errorResponse->oid = new OIDType(snmprequest->varBindsCursor->value->oid->_value);
-                errorResponse->errorStatus = NO_SUCH_NAME;
-                errorResponse->value = new NullType();
-                errorResponse->type = NULLTYPE;
+                Serial.println(F("OID NOT FOUND")); 
+                SNMPOIDResponse* errorResponse = generateErrorResponse(NO_SUCH_NAME, snmprequest->varBindsCursor->value->oid->_value);
                 response->addErrorResponse(errorResponse, varBindIndex);
                
             }
@@ -174,12 +258,12 @@ bool inline SNMPAgent::receivePacket(int packetLength){
         _udp->beginPacket(_udp->remoteIP(), _udp->remotePort());
         _udp->write(_packetBuffer, length);
         if(!_udp->endPacket()){
-            Serial.println("COULDN'T SEND PACKET");
+            Serial.println(F("COULDN'T SEND PACKET"));
             for(int i = 0;  i < length; i++){
                 Serial.print(_packetBuffer[i], HEX);
             }
-            Serial.print("Length: ");Serial.println(length);
-            Serial.print("Length of incoming: ");Serial.println(len);
+            Serial.print(F("Length: "));Serial.println(length);
+            Serial.print(F("Length of incoming: "));Serial.println(len);
         }
         delay(1);
         //Serial.println("Packet Sent");
@@ -194,10 +278,11 @@ bool inline SNMPAgent::receivePacket(int packetLength){
 //            length--;
 //        }
 //        //Serial.println();
-        
+//        Serial.print(F("freeMemory before delete="));
+//        Serial.println(freeMemory());
         delete response;
     } else {
-        Serial.println("CORRUPT PACKET");
+        Serial.println(F("CORRUPT PACKET"));
         VarBindList* tempList = snmprequest->varBinds;
         while(tempList->next){
             delete tempList->value->oid;
@@ -230,8 +315,6 @@ ValueCallback* SNMPAgent::findCallback(char* oid, bool next){
                     }
                 } else if(next){
                     // doesn't match, lets do a strstr to find out if it's possible for a walk
-                    
-                    
                     if(strstr(OIDBuf, oid)){ // this is the first occurance of the ENTIRE requested OID, which means it's the start of a walk, lets start here
                         return callbacksCursor->value;
                     }
@@ -246,43 +329,51 @@ ValueCallback* SNMPAgent::findCallback(char* oid, bool next){
                 break;
             }
         }
-        // if we get here and next is true, we give back the reference to the first value (this is the start of an snmpwalk)
-        // TODO: act more like a real SNMPWalk - if 1.3.6.1.4.1.9 is called, and we have 9.1, find the 9.1. (at the moment it just spits back the first OID we have)
-//        if(next){
-//            return callbacks->value;
-//        }
     }
     
     return 0;
 }
 
-char** SNMPAgent::addStringHandler(char* oid, char** value){
+ValueCallback* SNMPAgent::addStringHandler(char* oid, char** value, bool isSettable){
     ValueCallback* callback = new StringCallback();
+    if(isSettable) callback->isSettable = true;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((StringCallback*)callback)->value = value;
     addHandler(callback);
-    return value;
+    return callback;
 }
 
-int* SNMPAgent::addIntegerHandler(char* oid, int* value){
+ValueCallback* SNMPAgent::addIntegerHandler(char* oid, int* value, bool isSettable){
     ValueCallback* callback = new IntegerCallback();
+    if(isSettable) callback->isSettable = true;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((IntegerCallback*)callback)->value = value;
     ((IntegerCallback*)callback)->isFloat = false;
     addHandler(callback);
-    return value;
+    return callback;
 }
 
-float* SNMPAgent::addFloatHandler(char* oid, float* value){
+ValueCallback* SNMPAgent::addFloatHandler(char* oid, float* value, bool isSettable){
     ValueCallback* callback = new IntegerCallback();
+    if(isSettable) callback->isSettable = true;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((IntegerCallback*)callback)->value = (int*)value;
     ((IntegerCallback*)callback)->isFloat = true;
     addHandler(callback);
-    return value;
+    return callback;
+}
+
+ValueCallback* SNMPAgent::addTimestampHandler(char* oid, int* value, bool isSettable){
+    ValueCallback* callback = new TimestampCallback();
+    if(isSettable) callback->isSettable = true;
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
+    strcpy(callback->OID, oid);
+    ((TimestampCallback*)callback)->value = value;
+    addHandler(callback);
+    return callback;
 }
 
 void SNMPAgent::addHandler(ValueCallback* callback){
@@ -299,6 +390,34 @@ void SNMPAgent::addHandler(ValueCallback* callback){
         callbacks->value = callback;
 }
 
-
+bool SNMPAgent::removeHandler(ValueCallback* callback){ // this will remove the callback and shift everything in the list back so there are no gaps, this will not delete the actual callback
+//    callbacksCursor = callbacks;
+//    Serial.println("Entering hell...");
+//    if(!callbacksCursor->value){
+//        return false;
+//    }
+//    bool shifting = false;
+//    do {
+//        if(callbacksCursor->value == callback){
+//            // found
+//            while(callbacksCursor->next != 0){
+//                callbacksCursor->value = callbacksCursor->next->value;
+//                callbacksCursor = callbacksCursor->next;
+//                if(callbacksCursor->next == 0){
+//                    // this was last in line, move it to here then break;
+//                    break;
+//                }
+//                
+//            }
+//            delete callbacksCursor;
+//            shifting = true;
+//            break;
+//        }
+//        callbacksCursor = callbacksCursor->next;
+//    } while(callbacksCursor->next != 0);
+//    
+//    return shifting;
+    return false;
+}
 
 #endif

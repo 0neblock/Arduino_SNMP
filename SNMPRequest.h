@@ -119,7 +119,6 @@ bool SNMPRequest::parseFrom(unsigned char* buf){
                     cursor = cursor->next;
                     EXPECTING = ERRORID;
                 } else {
-                    Serial.println("Sup9");
                     isCorrupt = true;
                     return false;
                 }

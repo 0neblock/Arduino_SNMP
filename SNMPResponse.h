@@ -7,7 +7,22 @@ typedef enum ERROR_STATUS_WITH_VALUE {
     NO_SUCH_NAME = 2,
     BAD_VALUE = 3,
     READ_ONLY = 4,
-    GEN_ERR = 5
+    GEN_ERR = 5,
+        // v2c options are below
+        
+    NO_ACCESS = 6,
+    WRONG_TYPE = 7,
+    WRONG_LENGTH = 8,
+    WRONG_ENCODING = 9,
+    WRONG_VALUE = 10,
+    NO_CREATION = 11,
+    INCONSISTENT_VALUE = 12,
+    RESOURCE_UNAVAILABLE = 13,
+    COMMIT_FAILED = 14,
+    UNDO_FAILED = 15,
+    AUTHORIZATION_ERROR = 16,
+    NOT_WRITABLE = 17,
+    INCONSISTENT_NAME = 18
 } ERROR_STATUS;
 
 struct SNMPOIDResponse {
@@ -103,7 +118,7 @@ bool SNMPResponse::build(){
             break;
         }
         responseConductor = responseConductor->next;
-        delay(1);
+        delay(0);
     }
     
     PDUObj->addValueToList(varBindList);

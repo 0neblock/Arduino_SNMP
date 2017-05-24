@@ -10,13 +10,21 @@ typedef enum ASN_TYPE_WITH_VALUE {
     NULLTYPE = 0x05,
     OID = 0x06,
     
+    // derived
+    
+    
     // Complex
     STRUCTURE = 0x30,
+    NETWORK_ADDRESS = 0x40,
+    TIMESTAMP = 0x43,
+    
     GetRequestPDU = 0xA0,
     GetNextRequestPDU = 0xA1,
     GetResponsePDU = 0xA2,
     SetRequestPDU = 0xA3,
-    TrapPDU = 0xA4
+    TrapPDU = 0xA4,
+    Trapv2PDU = 0xA7
+    
 } ASN_TYPE;
 
 // primitive types inherits straight off the container, complex come off complexType
@@ -37,6 +45,41 @@ class BER_CONTAINER {
     virtual int getLength() = 0;
 };
 
+class NetworkAddress: public BER_CONTAINER {
+  public:
+    NetworkAddress(): BER_CONTAINER(true, NETWORK_ADDRESS){};
+    NetworkAddress(IPAddress ip): _value(ip), BER_CONTAINER(true, NETWORK_ADDRESS){};
+    ~NetworkAddress(){};
+    IPAddress _value;
+    int serialise(unsigned char* buf){
+        unsigned char* ptr = buf;
+        *ptr++ = _type;
+        
+        _length = 4;
+        
+        *ptr++ = _length;
+        *ptr++ = _value[0];
+        *ptr++ = _value[1];
+        *ptr++ = _value[2];
+        *ptr++ = _value[3];
+        return _length + 2;
+    }
+    bool fromBuffer(unsigned char* buf){
+        buf++;// skip Type
+        _length = *buf;
+        buf++;
+        byte tempAddress[4];
+        tempAddress[0] = *buf++;
+        tempAddress[1] = *buf++;
+        tempAddress[2] = *buf++;
+        tempAddress[3] = *buf++;
+        _value = IPAddress(tempAddress);
+        return true;
+    }
+    int getLength(){
+        return _length;
+    }
+};
 
 
 class IntegerType: public BER_CONTAINER {
@@ -88,10 +131,20 @@ class IntegerType: public BER_CONTAINER {
         }
         return true;
     }
-    
     int getLength(){
         return _length;
     }
+};
+
+class TimestampType: public IntegerType {
+  public:
+    TimestampType(): IntegerType(){
+        _type = TIMESTAMP;
+    };
+    TimestampType(unsigned long value): IntegerType(value){
+        _type = TIMESTAMP;
+    };
+    ~TimestampType(){};
 };
 
 class OctetType: public BER_CONTAINER {
@@ -129,10 +182,10 @@ class OIDType: public BER_CONTAINER {
   public:
     OIDType(): BER_CONTAINER(true, OID){};
     OIDType(char* value): BER_CONTAINER(true, OID){
-        strncpy(_value, value, 25);
+        strncpy(_value, value, 50);
     };
     ~OIDType(){};
-    char _value[25];
+    char _value[50];
     int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
         char* ptr = (char*)buf;
@@ -157,9 +210,19 @@ class OIDType: public BER_CONTAINER {
             memset(tempBuf, 0, 10);
 //            char* tempBuf = (char*) malloc(sizeof(char) * (end-start));
             strncpy(tempBuf, start, end-start+1);
-            *ptr++ = atoi(tempBuf);
+            long tempVal;
+            tempVal = atoi(tempBuf);
+            if(tempVal > 127){
+                *ptr++ = ((tempVal/128) | 0x80) & 0xFF;
+                *ptr++ = tempVal%128 & 0xFF;
+                _length += 2;
+            } else {
+                _length += 1;
+                *ptr++ = (char)tempVal;
+            }
+            
             valuePtr = end+1;
-            _length += 1;
+            
 //            free(tempBuf);
             if(toBreak) break;
             delay(1);
@@ -173,7 +236,7 @@ class OIDType: public BER_CONTAINER {
         _length = *buf;
         buf++;
         buf++;
-        memset(_value, 0, 25);
+        memset(_value, 0, 50);
         _value[0] = '.';
         _value[1] = '1';
         _value[2] = '.';
@@ -186,9 +249,9 @@ class OIDType: public BER_CONTAINER {
                 i--;
                 buf++;
             } else { // we have to do the special >128 thing
-                int value = 0; // keep track of the actual thing
+                long value = 0; // keep track of the actual thing
                 char n = 0; // count how many large bits have been set
-                char tempBuf[3]; // nobigger than 4 bytes
+                unsigned char tempBuf[4]; // nobigger than 4 bytes
                 while(*buf > 127){
                     i--;
                     *buf<<=1;
@@ -279,7 +342,7 @@ class ComplexType: public BER_CONTAINER {
                 valueLength -= 128;
                 buf++; i++;
                 valueLength = (valueLength*128) + (*buf-128);
-                Serial.println("DOUBLE LENGTH BYTES");
+                Serial.println(F("DOUBLE LENGTH BYTES"));
             }
             buf++; i++;
 //            Serial.println("SUP");
@@ -294,9 +357,11 @@ class ComplexType: public BER_CONTAINER {
                 case GetNextRequestPDU:
                 case GetResponsePDU:
                 case SetRequestPDU:
-                case TrapPDU:
+                case TrapPDU: // should never get trap, but put it in anyway
+                case Trapv2PDU:
                     newObj = new ComplexType(valueType);
                 break;
+                    // primitive
                 case INTEGER:
                     newObj = new IntegerType();
                     break;
@@ -308,7 +373,14 @@ class ComplexType: public BER_CONTAINER {
                     break;
                 case NULLTYPE:
                     newObj = new NullType();
-                    break;
+                break;
+                    // devired
+                case NETWORK_ADDRESS:
+                    newObj = new NetworkAddress();
+                break;
+                case TIMESTAMP:
+                    newObj = new TimestampType();
+                break;
             }
             newObj->fromBuffer(buf - 2);
             buf += valueLength; i+= valueLength;
@@ -328,7 +400,9 @@ class ComplexType: public BER_CONTAINER {
         *lengthPtr = 0;
         ValuesList* conductor = _values;
         while(conductor){
-            delay(1);
+//            Serial.print("about to serialise something of type: ");Serial.println(conductor->value->_type, HEX);
+            delay(0);
+            
             int length = conductor->value->serialise(ptr);
             ptr += length;
             actualLength += length;
@@ -363,7 +437,7 @@ class ComplexType: public BER_CONTAINER {
         if(_values != 0){
             while(conductor->next != 0){
                 conductor = conductor->next;
-                delay(1);
+                delay(0);
             }
             conductor->next = new ValuesList;
             conductor = conductor->next;
