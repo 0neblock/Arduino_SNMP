@@ -3,8 +3,14 @@
 
 typedef struct VarBindStruct {
     ~VarBindStruct(){
-//        if(value) delete value;
-//        if(oid) delete oid;
+	//	if (value) {
+	//		delete value;
+	//		
+	//	}
+	//	if (oid) {
+	//		delete oid;
+	//		
+	//	}
     };
     OIDType* oid = 0;
     ASN_TYPE type;

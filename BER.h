@@ -16,6 +16,7 @@ typedef enum ASN_TYPE_WITH_VALUE {
     // Complex
     STRUCTURE = 0x30,
     NETWORK_ADDRESS = 0x40,
+	COUNTER32 = 0x41,
     TIMESTAMP = 0x43,
     
     GetRequestPDU = 0xA0,
@@ -94,6 +95,8 @@ class IntegerType: public BER_CONTAINER {
         *ptr = _type;
         ptr++;
         unsigned char* lengthPtr = ptr++;
+		//Serial.print("INTEGER length: ");
+		//Serial.println(*lengthPtr);
         if(_value != 0){
             _length = 4; // FIXME: need to give this dynamic length
         //        while(_length > 1){
@@ -120,20 +123,85 @@ class IntegerType: public BER_CONTAINER {
     bool fromBuffer(unsigned char* buf){
         buf++;// skip Type
         _length = *buf;
-        buf++;
+		
+		buf++;
+	
         unsigned short tempLength = _length;
-//        _value = *buf; // TODO: make work for integers more than 255
+		_value = *buf; // TODO: make work for integers more than 255
+		
         _value = 0;
         while(tempLength > 0){
             _value = _value << 8;
             _value = _value | *buf++;
             tempLength--;
         }
+		//Serial.print("Counter Value: "); Serial.println(_value);
         return true;
     }
     int getLength(){
         return _length;
     }
+};
+
+class Counter32 : public BER_CONTAINER {
+public:
+	Counter32() : BER_CONTAINER(true, INTEGER) {};
+	Counter32(unsigned long value) : _value(value), BER_CONTAINER(true, INTEGER) {};
+	~Counter32() {};
+	unsigned long _value;
+	int serialise(unsigned char* buf) {
+		// here we print out the BER encoded ASN.1 bytes, which includes type, length and value. we return the length of the entire block (TL&V) ni bytes;
+		unsigned char* ptr = buf;
+		*ptr = _type;
+		ptr++;
+		unsigned char* lengthPtr = ptr++;
+		Serial.print("INTEGER length: ");
+		Serial.println(*lengthPtr);
+		if (_value != 0) {
+			_length = 4; // FIXME: need to give this dynamic length
+						 //        while(_length > 1){
+						 //            if(_value >> 24 == 0){
+						 //                _length--;
+						 //                _value = _value << 8;
+						 //            } else {
+						 //                break;
+						 //            }
+						 //        }
+			*ptr++ = _value >> 24 & 0xFF;
+			*ptr++ = _value >> 16 & 0xFF;
+			*ptr++ = _value >> 8 & 0xFF;
+			*ptr++ = _value & 0xFF;
+
+
+		}
+		else {
+			_length = 1;
+			*ptr = 0;
+		}
+		*lengthPtr = _length;
+		return _length + 2;
+	}
+	bool fromBuffer(unsigned char* buf) {
+		buf++;// skip Type
+		_length = *buf;
+
+		buf++;
+
+		unsigned short tempLength = _length;
+		_value = *buf; // TODO: make work for integers more than 255
+
+		_value = 0;
+		while (tempLength > 0) {
+			_value = _value << 8;
+			_value = _value | *buf++;
+			tempLength--;
+		}
+		//Serial.print("Counter Value: "); Serial.println(_value);
+		return true;
+	}
+	int getLength() {
+		return _length;
+	}
 };
 
 class TimestampType: public IntegerType {
@@ -270,11 +338,10 @@ class OIDType: public BER_CONTAINER {
             }
             delay(1);
         }
-        Serial.print("OID: " );Serial.println(_value);
+        //Serial.print("OID: " );Serial.println(_value);
 //        memcpy(_value, buf, _length);
         return true;
     }
-    
     int getLength(){
         return _length;
     }
@@ -318,9 +385,13 @@ class ComplexType: public BER_CONTAINER {
     ComplexType(ASN_TYPE type): BER_CONTAINER(false, type){};
     ~ComplexType(){
         delete _values;
+		
     }
     ValuesList* _values = 0;
+
+	// buf is an unsigned char pointer to an array that lists the bytes we got from the UDP packet 
     bool fromBuffer(unsigned char* buf){
+
         // the buffer we get passed in is the complete ASN Container, including the type header.
         buf++; // Skip our own type
         _length = *buf;
@@ -334,7 +405,10 @@ class ComplexType: public BER_CONTAINER {
         // now we are at the front of a list of one or many other types, lets do our loop
         unsigned char i = 0;
         while(i < _length){
-            ASN_TYPE valueType = (ASN_TYPE)*buf;
+
+        
+		 
+			ASN_TYPE valueType = (ASN_TYPE)*buf;
             buf++; i++;
             unsigned short valueLength = *buf;
             if(valueLength > 127){
@@ -346,7 +420,7 @@ class ComplexType: public BER_CONTAINER {
             }
             buf++; i++;
 //            Serial.println("SUP");
-//            char* newValue = (char*)malloc(sizeof(char) * valueLength + 2);
+//            char*	Value = (char*)malloc(sizeof(char) * valueLength + 2);
 //            memset(newValue, 0, valueLength + 2);
 //            memcpy(newValue, buf - 2, valueLength + 2);
 //            buf += valueLength; i+= valueLength;
@@ -363,12 +437,17 @@ class ComplexType: public BER_CONTAINER {
                 break;
                     // primitive
                 case INTEGER:
-                    newObj = new IntegerType();
+					newObj = new IntegerType();
                     break;
                 case STRING:
                     newObj = new OctetType();
                     break;
+				case COUNTER32:
+					//Serial.println("valueType is counter32");
+					newObj = new Counter32();
+					break;
                 case OID: 
+//					Serial.println("valueType is OID");
                     newObj = new OIDType();
                     break;
                 case NULLTYPE:
@@ -381,14 +460,17 @@ class ComplexType: public BER_CONTAINER {
                 case TIMESTAMP:
                     newObj = new TimestampType();
                 break;
+				
             }
+
             newObj->fromBuffer(buf - 2);
             buf += valueLength; i+= valueLength;
             //newObj->fromBuffer(newValue);
 //            free(newValue);
             addValueToList(newObj);
+			
         }
-        return true;
+		return true;
     }
     
     int serialise(unsigned char* buf){
@@ -400,7 +482,7 @@ class ComplexType: public BER_CONTAINER {
         *lengthPtr = 0;
         ValuesList* conductor = _values;
         while(conductor){
-//            Serial.print("about to serialise something of type: ");Serial.println(conductor->value->_type, HEX);
+            //Serial.print("about to serialise something of type: ");Serial.println(conductor->value->_type, HEX);
             delay(0);
             
             int length = conductor->value->serialise(ptr);
@@ -425,6 +507,7 @@ class ComplexType: public BER_CONTAINER {
         } else {
             *lengthPtr = actualLength;
         }
+		delete conductor;
         return actualLength + 2;
     }
     

@@ -40,20 +40,27 @@ class SNMPRequest {
 
 bool SNMPRequest::parseFrom(unsigned char* buf){
     SNMPPacket = new ComplexType(STRUCTURE);
+
+	// confirm that the packet is a STRUCTURE
     if(buf[0] != 0x30) {
         isCorrupt = true;
         return false;
     }
+
     SNMPPacket->fromBuffer(buf);
+
+	
     // we now have a full ASN.1 packet in SNMPPacket
     ValuesList* cursor = SNMPPacket->_values;
     ValuesList* tempCursor;
     
+
     while(EXPECTING != DONE){
         switch(EXPECTING){
             case SNMPVERSION:
                 if(cursor->value->_type == INTEGER){
                     version = ((IntegerType*)cursor->value)->_value + 1;
+					
                     if(!cursor->next){
                         isCorrupt = true;
                         return false;
@@ -68,6 +75,7 @@ bool SNMPRequest::parseFrom(unsigned char* buf){
             case COMMUNITY:
                 if(cursor->value->_type == STRING){
                     communityString = ((OctetType*)cursor->value)->_value;
+
                     if(!cursor->next){
                         isCorrupt = true;
                         return false;
@@ -93,6 +101,8 @@ bool SNMPRequest::parseFrom(unsigned char* buf){
                     break;
                 }
                 cursor = ((ComplexType*)cursor->value)->_values;
+				//Serial.print("PDU: ");
+				//Serial.println(cursor);
                 EXPECTING = REQUESTID;
             break;
             case REQUESTID:
@@ -170,9 +180,12 @@ bool SNMPRequest::parseFrom(unsigned char* buf){
                     isCorrupt = true;
                     return false;
                 }
+
             break;
         }
     }
+	//Serial.print("Free Heap Size SNMPRequest::parseFrom: ");
+	//Serial.println(xPortGetFreeHeapSize());
     return true;
 }
 
