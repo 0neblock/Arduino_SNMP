@@ -44,14 +44,15 @@ class SNMPTrap {
     }
     
     void addOIDPointer(ValueCallback* callback);
-    
-    
+
+
     ValueCallbacks* callbacks = new ValueCallbacks();
     ValueCallbacks* callbacksCursor = callbacks;
     
     
     UDP* _udp = 0;
     bool sendTo(IPAddress ip){
+		//Serial.println("Trying to Send Packet");
         if(!_udp){
             return false;
         }
