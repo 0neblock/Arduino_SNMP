@@ -31,7 +31,7 @@ class SNMPTrap {
     void setSpecificTrap(short num){
         specificTrap = num;
     }
-    void setIP(IPAddress ip){
+    void setIP(IPAddress ip){ // sets our IP
         agentIP = ip;
     }
     

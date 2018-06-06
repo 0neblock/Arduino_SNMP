@@ -78,9 +78,12 @@ class SNMPAgent {
         }
         UDP* _udp;
         bool removeHandler(ValueCallback* callback);
-    private:
-        
         void addHandler(ValueCallback* callback);
+        bool sortHandlers();
+        
+        void swap(ValueCallbacks*, ValueCallbacks*);
+    private:
+        bool sort_oid(char*, char*);
         unsigned char _packetBuffer[SNMP_PACKET_LENGTH];
         bool inline receivePacket(int length);
         SNMPOIDResponse* generateErrorResponse(ERROR_STATUS error, char* oid){
@@ -185,8 +188,8 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                             switch(callback->type){
                                 case STRING:
                                     {
-                                        memcpy(*((StringCallback*)callback)->value, String(((OctetType*)snmprequest->varBindsCursor->value->value)->_value).c_str(), 25);// FIXME: this is VERY dangerous, i'm assuming the length of the source char*, this needs to change. for some reason strncpy didnd't work, need to look into this. the '25' also needs to be defined somewhere so this won't break;
-                                        *(*((StringCallback*)callback)->value + 24) = 0x0; // close off the dest string, temporary
+                                        memcpy(*((StringCallback*)callback)->value, String(((OctetType*)snmprequest->varBindsCursor->value->value)->_value).c_str(), 32);// FIXME: this is VERY dangerous, i'm assuming the length of the source char*, this needs to change. for some reason strncpy didnd't work, need to look into this. the '25' also needs to be defined somewhere so this won't break;
+                                        *(*((StringCallback*)callback)->value + 31) = 0x0; // close off the dest string, temporary
                                         OctetType* value = new OctetType(*((StringCallback*)callback)->value);
                                         OIDResponse->value = value;
                                         setOccurred = true;
@@ -390,34 +393,133 @@ void SNMPAgent::addHandler(ValueCallback* callback){
         callbacks->value = callback;
 }
 
-bool SNMPAgent::removeHandler(ValueCallback* callback){ // this will remove the callback and shift everything in the list back so there are no gaps, this will not delete the actual callback
-//    callbacksCursor = callbacks;
-//    Serial.println("Entering hell...");
-//    if(!callbacksCursor->value){
-//        return false;
-//    }
-//    bool shifting = false;
-//    do {
-//        if(callbacksCursor->value == callback){
-//            // found
-//            while(callbacksCursor->next != 0){
-//                callbacksCursor->value = callbacksCursor->next->value;
-//                callbacksCursor = callbacksCursor->next;
-//                if(callbacksCursor->next == 0){
-//                    // this was last in line, move it to here then break;
-//                    break;
-//                }
-//                
-//            }
-//            delete callbacksCursor;
-//            shifting = true;
-//            break;
-//        }
-//        callbacksCursor = callbacksCursor->next;
-//    } while(callbacksCursor->next != 0);
-//    
-//    return shifting;
-    return false;
+// Let's implement this properly, we also want to inntroduce a sort() so after we add or remove stuff around we can make sure snmpwalk will still erturn in an expected way.
+
+bool SNMPAgent::removeHandler(ValueCallback* callback){ // this will remove the callback from the list and shift everything in the list back so there are no gaps, this will not delete the actual callback
+    callbacksCursor = callbacks;
+    // Serial.println("Entering hell...");
+    if(!callbacksCursor->value){
+            return false;
+    }
+    bool shifting = false;
+    if(callbacksCursor->value == callback){ // first callback is it
+        shifting = true;
+        callbacks = callbacksCursor->next; // save next element to the current global cursor
+    } else {
+        while(callbacksCursor->next != 0){
+            if(callbacksCursor->next->value == callback){ // if the thing pouinted to by NEXT is the thing we want to remove
+                if(callbacksCursor->next->next != 0){ // if next has a next that we replace the first next by
+                    callbacksCursor->next = callbacksCursor->next->next;
+                } else {
+                    callbacksCursor->next = 0;
+                }
+                shifting = true;
+                break;
+            }
+            callbacksCursor = callbacksCursor->next;
+        }
+    }
+    return shifting;
+}
+
+bool SNMPAgent::sortHandlers(){ // we want to sort our callbacks in order of OID's so we can walk correctly
+    callbacksCursor = callbacks;
+    
+    int swapped, i;
+    ValueCallbacks* ptr1;
+    ValueCallbacks* lptr = 0;
+ 
+    /* Checking for empty list */
+    if (callbacksCursor == 0)
+        return false;
+ 
+    do
+    {
+        swapped = 0;
+        ptr1 = callbacksCursor;
+ 
+        while (ptr1->next != lptr)
+        {
+            if (!sort_oid(ptr1->value->OID, ptr1->next->value->OID))
+            { 
+                swap(ptr1, ptr1->next);
+                swapped = 1;
+            }
+            ptr1 = ptr1->next;
+        }
+        lptr = ptr1;
+    }
+    while (swapped);
+    return true;
+}
+
+void SNMPAgent::swap(ValueCallbacks* one, ValueCallbacks* two){
+    ValueCallback* temp = one->value;
+    one->value = two->value;
+    two->value = temp; 
+}
+
+bool SNMPAgent::sort_oid(char* oid1, char* oid2){ // returns true if oid1 EARLIER than oid2
+    uint16_t oid_nums_1[20] = {0}; // max 20 deep
+    uint16_t oid_nums_2[20] = {0}; // max 20 deep
+
+    int i = 0; // current num_array index
+    bool toBreak = false;
+    
+    while(*oid1){
+        if(*oid1 == '.') oid1++;
+        int num = 0;
+        if(sscanf(oid1, "%d", &num)){
+            // worked?
+            oid_nums_1[i++] = num;
+            while(*oid1 != '.') {
+                if(*oid1 == 0){
+                    toBreak = true;
+                    break;
+                }
+                oid1++;
+            }
+            if(toBreak) break;
+        } else {
+            // break
+            break;
+        }
+    }
+
+    i = 0; // current num_array index
+    toBreak = false;
+    
+    while(*oid2){
+        if(*oid2 == '.') oid2++;
+        int num = 0;
+        if(sscanf(oid2, "%d", &num)){
+            // worked?
+            oid_nums_2[i++] = num;
+            while(*oid2 != '.') {
+                if(*oid2 == 0){
+                    toBreak = true;
+                    break;
+                }
+                oid2++;
+            }
+            if(toBreak) break;
+        } else {
+            // break
+            break;
+        }
+    }
+
+    
+    for(int j = 0; j < i; j++){
+        if(oid_nums_1[j] != oid_nums_2[j]){ // if they're the same then we're on same levvel
+            if(oid_nums_1[j] < oid_nums_2[j]){ // if this level is smaller, then we are earlier. this will also work if this oid is a parent of the other oid because by default we'll be 0
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 #endif
