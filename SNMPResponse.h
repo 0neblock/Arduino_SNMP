@@ -123,6 +123,7 @@ bool SNMPResponse::build(){
     
     PDUObj->addValueToList(varBindList);
     response->addValueToList(PDUObj);
+    return true;
 }
 
 #endif
