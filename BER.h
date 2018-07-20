@@ -152,6 +152,7 @@ class OctetType: public BER_CONTAINER {
     OctetType(): BER_CONTAINER(true, STRING){};
     OctetType(char* value): BER_CONTAINER(true, STRING){
         strncpy(_value, value, 32);
+        _value[31] = 0;
     };
     ~OctetType(){};
     char _value[32];
@@ -170,7 +171,7 @@ class OctetType: public BER_CONTAINER {
         buf++;
         memset(_value, 0, 32);
         if(_length > 32){
-            strncpy(_value, (char*)buf, 32);
+            strncpy(_value, (char*)buf, 31);
         } else {
             strncpy(_value, (char*)buf, _length);
         }

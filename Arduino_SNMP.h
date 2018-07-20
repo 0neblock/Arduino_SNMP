@@ -256,7 +256,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
          memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
         delay(1);
         int length = response->serialise(_packetBuffer);
-        //Serial.print("Serialised into length: ");//Serial.println(length);
+        // Serial.print("Serialised into length: ");Serial.println(length);
         delay(1);
         _udp->beginPacket(_udp->remoteIP(), _udp->remotePort());
         _udp->write(_packetBuffer, length);
@@ -269,7 +269,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
             Serial.print(F("Length of incoming: "));Serial.println(len);
         }
         delay(1);
-        //Serial.println("Packet Sent");
+        // Serial.println("Packet Sent");
 //        
 //        //Serial.print("Length of response: ");//Serial.println(length);
 //        //Serial.print("Response: ");
