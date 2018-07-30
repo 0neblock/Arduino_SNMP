@@ -43,6 +43,12 @@ class StringCallback: public ValueCallback {
     char** value;
 };
 
+class OIDCallback: public ValueCallback {
+  public:
+    OIDCallback(): ValueCallback(ASN_TYPE::OID){};
+    char* value;
+};
+
 typedef struct ValueCallbackList {
     ~ValueCallbackList(){
         delete next;
@@ -65,6 +71,7 @@ class SNMPAgent {
         ValueCallback* addStringHandler(char*, char**, bool isSettable = false); // passing in a pointer to a char* 
         ValueCallback* addIntegerHandler(char* oid, int* value, bool isSettable = false);
         ValueCallback* addTimestampHandler(char* oid, int* value, bool isSettable = false);
+        ValueCallback* addOIDHandler(char* oid, char* value);
         
         bool setUDP(UDP* udp);
         bool begin();
@@ -234,6 +241,9 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                     } else if(callback->type == TIMESTAMP){
                         TimestampType* value = new TimestampType(*(((TimestampCallback*)callback)->value));
                         OIDResponse->value = value;
+                    } else if(callback->type == OID){
+                        OIDType* value = new OIDType((((OIDCallback*)callback)->value));
+                        OIDResponse->value = value;
                     }
                     response->addResponse(OIDResponse);
                 }
@@ -375,6 +385,15 @@ ValueCallback* SNMPAgent::addTimestampHandler(char* oid, int* value, bool isSett
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((TimestampCallback*)callback)->value = value;
+    addHandler(callback);
+    return callback;
+}
+
+ValueCallback* SNMPAgent::addOIDHandler(char* oid, char* value){
+    ValueCallback* callback = new OIDCallback();
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
+    strcpy(callback->OID, oid);
+    ((OIDCallback*)callback)->value = value;
     addHandler(callback);
     return callback;
 }
