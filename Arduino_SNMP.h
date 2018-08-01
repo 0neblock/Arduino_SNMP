@@ -57,6 +57,12 @@ typedef struct ValueCallbackList {
     struct ValueCallbackList* next = 0;
 } ValueCallbacks;
 
+typedef struct RFC1213SystemStruct { // TODO: complete this
+    char* sysDescr;
+    char* sysObjectID;
+    char* sysContact;
+} RFC1213_list;
+
 #include "SNMPTrap.h"
 
 class SNMPAgent {
@@ -89,6 +95,10 @@ class SNMPAgent {
         bool sortHandlers();
         
         void swap(ValueCallbacks*, ValueCallbacks*);
+
+        void enableRFC1213(){ // automatically enables and adds RFC1213 "System" variables. provide a 
+
+        }
     private:
         bool sort_oid(char*, char*);
         unsigned char _packetBuffer[SNMP_PACKET_LENGTH];
@@ -159,7 +169,6 @@ bool inline SNMPAgent::receivePacket(int packetLength){
         int varBindIndex = 1;
         snmprequest->varBindsCursor = snmprequest->varBinds;
         while(true){
-            delay(1);
             //Serial.print("OID: ");//Serial.println(snmprequest->varBindsCursor->value->oid->_value);
             
             // Deal with OID request here:
@@ -263,11 +272,8 @@ bool inline SNMPAgent::receivePacket(int packetLength){
             varBindIndex++;
         }
 //        Serial.println("Sending UDP");
-         memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
-        delay(1);
+        memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
         int length = response->serialise(_packetBuffer);
-        // Serial.print("Serialised into length: ");Serial.println(length);
-        delay(1);
         _udp->beginPacket(_udp->remoteIP(), _udp->remotePort());
         _udp->write(_packetBuffer, length);
         if(!_udp->endPacket()){
@@ -278,21 +284,6 @@ bool inline SNMPAgent::receivePacket(int packetLength){
             Serial.print(F("Length: "));Serial.println(length);
             Serial.print(F("Length of incoming: "));Serial.println(len);
         }
-        delay(1);
-        // Serial.println("Packet Sent");
-//        
-//        //Serial.print("Length of response: ");//Serial.println(length);
-//        //Serial.print("Response: ");
-//        char* buff = buf;
-//        while(length != 0){
-//            //Serial.print(*buff, HEX);
-//            //Serial.print(" ");
-//            buff++;
-//            length--;
-//        }
-//        //Serial.println();
-//        Serial.print(F("freeMemory before delete="));
-//        Serial.println(freeMemory());
         delete response;
     } else {
         Serial.println(F("CORRUPT PACKET"));
