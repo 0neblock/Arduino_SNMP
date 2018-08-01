@@ -2,6 +2,7 @@
 #define BER_h
 
 #include <Arduino.h>
+#include <math.h>
 
 typedef enum ASN_TYPE_WITH_VALUE {
     // Primatives
@@ -218,6 +219,11 @@ class OIDType: public BER_CONTAINER {
             long tempVal;
             tempVal = atoi(tempBuf);
             if(tempVal > 127){
+                // Serial.print("large num: ");Serial.println(tempVal);
+                if(tempVal/128 > 128){
+                    *ptr++ = ((tempVal/128/128) | 0x80) & 0xFF; // dodgy
+                    _length += 1;
+                }
                 *ptr++ = ((tempVal/128) | 0x80) & 0xFF;
                 *ptr++ = tempVal%128 & 0xFF;
                 _length += 2;
@@ -230,7 +236,7 @@ class OIDType: public BER_CONTAINER {
             
 //            free(tempBuf);
             if(toBreak) break;
-            delay(1);
+            // delay(1);
         }
         *lengthPtr = _length - 2;
         
@@ -256,11 +262,10 @@ class OIDType: public BER_CONTAINER {
             } else { // we have to do the special >128 thing
                 long value = 0; // keep track of the actual thing
                 char n = 0; // count how many large bits have been set
-                unsigned char tempBuf[4]; // nobigger than 4 bytes
+                unsigned char tempBuf[6] = {0}; // nobigger than 4 bytes
                 while(*buf > 127){
                     i--;
-                    *buf<<=1;
-                    *buf>>=1;
+                    *buf &= 0x7F;
                     tempBuf[n] = *buf;
                     n++;
                     buf++;
@@ -269,11 +274,12 @@ class OIDType: public BER_CONTAINER {
                 buf++;
                 i--;
                 for(char k = 0; k < n; k++){
-                    value += (128 * (n-k)) * tempBuf[k];
+                    value += (pow(128,(n-k))) * tempBuf[k];
+                    
                 }
                 ptr += sprintf(ptr, ".%d", value);
             }
-            delay(1);
+            // delay(1);
         }
         Serial.print("OID: " );Serial.println(_value);
 //        memcpy(_value, buf, _length);
