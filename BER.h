@@ -348,15 +348,19 @@ class ComplexType: public BER_CONTAINER {
             ASN_TYPE valueType = (ASN_TYPE)*buf;
             buf++; i++;
             unsigned short valueLength = *buf;
+            bool doubleL = false;
             if(valueLength > 127){
                 // also do this.
                 valueLength -= 128;
                 buf++; i++;
                 valueLength = (valueLength*128) + (*buf-128);
                 Serial.println(F("DOUBLE LENGTH BYTES"));
+                doubleL = true;
             }
             buf++; i++;
-//            Serial.println("SUP");
+            // Serial.print("Lenght:");
+            // Serial.println(valueLength);
+            // Serial.println("SUP");
 //            char* newValue = (char*)malloc(sizeof(char) * valueLength + 2);
 //            memset(newValue, 0, valueLength + 2);
 //            memcpy(newValue, buf - 2, valueLength + 2);
@@ -393,7 +397,11 @@ class ComplexType: public BER_CONTAINER {
                     newObj = new TimestampType();
                 break;
             }
-            newObj->fromBuffer(buf - 2);
+            if(doubleL){
+                newObj->fromBuffer(buf - 3); // if we had larger size, we need to give -3
+            } else {
+                newObj->fromBuffer(buf - 2);
+            }
             buf += valueLength; i+= valueLength;
             //newObj->fromBuffer(newValue);
 //            free(newValue);
@@ -410,6 +418,7 @@ class ComplexType: public BER_CONTAINER {
         unsigned char* lengthPtr = ptr++;
         *lengthPtr = 0;
         ValuesList* conductor = _values;
+        int tempLength = 0;
         while(conductor){
 //            Serial.print("about to serialise something of type: ");Serial.println(conductor->value->_type, HEX);
             delay(0);
@@ -419,24 +428,47 @@ class ComplexType: public BER_CONTAINER {
             actualLength += length;
             conductor = conductor->next;
         }
+        printf("Length to return: %d\n", actualLength);
         if(actualLength > 127){
 //            Serial.println("TOO BIG");
             // bad, we have to add another byte and shift everything afterwards by 1 >>
               // first byte is 128 + (actualLength / 128)
               // second is actualLength % 128;
-            *lengthPtr = 129;
+              int tempVal = 1;
+            if(actualLength > 256){
+                *lengthPtr++ = (2 | 0x80) & 0xFF; // dodgy
+                
+                tempLength += 1;
+                unsigned char* endPtrPos = ++ptr;
+                for(unsigned char* i = endPtrPos; i > buf + 1; i--){
+                    // i is the char we are moving INTO
+                    *i = *(i - 1);
+                }
+                tempVal = 2;
+                *lengthPtr++ = actualLength/256;
+            } else {
+                *lengthPtr++ = (1 | 0x80)  & 0xFF;
+            }
+            
+
+            // *lengthPtr = 129;
+            // if(actualLength > 256){
+            //     *lengthPtr = 130;
+            // }
             // lets move everything right one byte, start from back..
             unsigned char* endPtrPos = ptr + 1;
-            for(unsigned char* i = endPtrPos; i > buf +1; i--){
+            for(unsigned char* i = endPtrPos; i > buf + tempVal; i--){
                 // i is the char we are moving INTO
                 *i = *(i - 1);
             }
-            *(lengthPtr+1) = (actualLength % 128)|0x80;
-            actualLength += 1; // account for extra byte in Length param
+            *lengthPtr++ = actualLength%256;
+            
+            // *(lengthPtr+1) = (actualLength % 128)|0x80;
+            tempLength += 1; // account for extra byte in Length param
         } else {
             *lengthPtr = actualLength;
         }
-        return actualLength + 2;
+        return actualLength + 2 + tempLength;
     }
     
     int getLength(){
