@@ -2,12 +2,14 @@
 #define SNMPAgent_h
 
 #ifndef UDP_TX_PACKET_MAX_SIZE
-    #define UDP_TX_PACKET_MAX_SIZE 256
+    #define UDP_TX_PACKET_MAX_SIZE 484
 #endif
 
 #ifndef SNMP_PACKET_LENGTH
-    #define SNMP_PACKET_LENGTH 256
+    #define SNMP_PACKET_LENGTH 484
 #endif
+
+#define MIN(X, Y) ((X < Y) ? X : Y)
 
 #include <UDP.h>
 
@@ -22,6 +24,7 @@ class ValueCallback {
     char* OID;
     ASN_TYPE type;
     bool isSettable = false;
+    bool overwritePrefix = false;
 };
 
 class IntegerCallback: public ValueCallback {
@@ -63,21 +66,44 @@ typedef struct RFC1213SystemStruct { // TODO: complete this
     char* sysContact;
 } RFC1213_list;
 
+typedef enum {
+     SNMP_PERM_NONE,
+     SNMP_PERM_READ_ONLY,
+     SNMP_PERM_READ_WRITE
+} SNMP_PERMISSION;
+
 #include "SNMPTrap.h"
 
 class SNMPAgent {
     public:
+        SNMPAgent(){};
         SNMPAgent(const char* community): _community(community){};
+
+        void setRWCommunity(const char* readWrite){       // read/write
+            this->_community = readWrite;
+        }
+
+        void setROCommunity(const char* readOnly){       // read/write
+            this->_readOnlyCommunity = readOnly;
+        }
+
+        void setCommunity(const char* readOnly, const char* readWrite){    // readOPnly, read/write
+            this->_community = readWrite;
+            this->_readOnlyCommunity = readOnly;
+        }
         const char* _community;
+        const char* _readOnlyCommunity = 0;
+
+
         ValueCallbacks* callbacks = new ValueCallbacks();
         ValueCallbacks* callbacksCursor = callbacks;
 //        bool addHandler(char* OID, SNMPOIDResponse (*callback)(SNMPOIDResponse* response, char* oid));
         ValueCallback* findCallback(char* oid, bool next);
-        ValueCallback* addFloatHandler(char* oid, float* value, bool isSettable = false); // this obv just adds integer but with the *0.1 set
-        ValueCallback* addStringHandler(char*, char**, bool isSettable = false); // passing in a pointer to a char* 
-        ValueCallback* addIntegerHandler(char* oid, int* value, bool isSettable = false);
-        ValueCallback* addTimestampHandler(char* oid, int* value, bool isSettable = false);
-        ValueCallback* addOIDHandler(char* oid, char* value);
+        ValueCallback* addFloatHandler(char* oid, float* value, bool isSettable = false, bool overwritePrefix = false); // this obv just adds integer but with the *0.1 set
+        ValueCallback* addStringHandler(char*, char**, bool isSettable = false, bool overwritePrefix = false); // passing in a pointer to a char* 
+        ValueCallback* addIntegerHandler(char* oid, int* value, bool isSettable = false, bool overwritePrefix = false);
+        ValueCallback* addTimestampHandler(char* oid, int* value, bool isSettable = false, bool overwritePrefix = false);
+        ValueCallback* addOIDHandler(char* oid, char* value, bool overwritePrefix = false);
         
         bool setUDP(UDP* udp);
         bool begin();
@@ -144,12 +170,13 @@ bool inline SNMPAgent::receivePacket(int packetLength){
     memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
     int len = packetLength;
 //    int len = _udp->read(_packetBuffer, SNMP_PACKET_LENGTH);
-    for(int i = 0; i < len; i++){
-        _packetBuffer[i] = _udp->read();
-//        Serial.print(_packetBuffer[i], HEX);
-//        Serial.print(" ");
-    }
-    Serial.println();
+    _udp->read(_packetBuffer, MIN(len, SNMP_PACKET_LENGTH));
+//     for(int i = 0; i < len; i++){
+//         _packetBuffer[i] = _udp->read();
+// //        Serial.print(_packetBuffer[i], HEX);
+// //        Serial.print(" ");
+//     }
+    Serial.println(len);
     _udp->flush();
     _packetBuffer[len] = 0;
 //    Serial.println(_packetBuffer);
@@ -157,8 +184,20 @@ bool inline SNMPAgent::receivePacket(int packetLength){
     if(snmprequest->parseFrom(_packetBuffer)){
         
         // check version and community
-        if(snmprequest->version != 1 || strcmp(_community, snmprequest->communityString) != 0) {
-            Serial.println(F("Invalid community or version"));
+
+        SNMP_PERMISSION requestPermission = SNMP_PERM_NONE;
+
+
+        if(_readOnlyCommunity != 0 && strcmp(_readOnlyCommunity, snmprequest->communityString) == 0) { // snmprequest->version != 1
+            requestPermission = SNMP_PERM_READ_ONLY;
+        }
+
+        if(strcmp(_community, snmprequest->communityString) == 0) { // snmprequest->version != 1
+            requestPermission = SNMP_PERM_READ_WRITE;
+        }
+
+        if(requestPermission == SNMP_PERM_NONE){
+            Serial.println(F("Invalid permissions"));
             delete snmprequest;
             return false;
         }
@@ -182,7 +221,10 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                 OIDResponse->errorStatus = (ERROR_STATUS)0;
                 
                 memset(OIDBuf, 0, 50);
-                strcat(OIDBuf, oidPrefix);
+                if(!callback->overwritePrefix){
+                    strcat(OIDBuf, oidPrefix);
+                }
+                
                 strcat(OIDBuf, callback->OID);
                 
                 OIDResponse->oid = new OIDType(OIDBuf);
@@ -193,40 +235,46 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                 if(snmprequest->requestType == SetRequestPDU){
                     // settable data..
                     if(callback->isSettable){
-                        if(callback->type != snmprequest->varBindsCursor->value->type){
-                            // wrong data type to set..
-                            // BAD_VALUE
-                            Serial.println(F("VALUE-TYPE DOES NOT MATCH")); 
-                            SNMPOIDResponse* errorResponse = generateErrorResponse(BAD_VALUE, snmprequest->varBindsCursor->value->oid->_value);
+                        if(requestPermission == SNMP_PERM_READ_ONLY){ // community is readOnly
+                            Serial.println(F("READONLY COMMUNITY USED")); 
+                            SNMPOIDResponse* errorResponse = generateErrorResponse(NO_ACCESS, snmprequest->varBindsCursor->value->oid->_value);
                             response->addErrorResponse(errorResponse, varBindIndex);
                         } else {
-                            // actually set it
-                            switch(callback->type){
-                                case STRING:
-                                    {
-                                        memcpy(*((StringCallback*)callback)->value, String(((OctetType*)snmprequest->varBindsCursor->value->value)->_value).c_str(), 32);// FIXME: this is VERY dangerous, i'm assuming the length of the source char*, this needs to change. for some reason strncpy didnd't work, need to look into this. the '25' also needs to be defined somewhere so this won't break;
-                                        *(*((StringCallback*)callback)->value + 31) = 0x0; // close off the dest string, temporary
-                                        OctetType* value = new OctetType(*((StringCallback*)callback)->value);
-                                        OIDResponse->value = value;
-                                        setOccurred = true;
-                                    }
-                                break;
-                                case INTEGER:
-                                    {
-                                        IntegerType* value = new IntegerType();
-                                        if(!((IntegerCallback*)callback)->isFloat){
-                                            *(((IntegerCallback*)callback)->value) = ((IntegerType*)snmprequest->varBindsCursor->value->value)->_value;
-                                            value->_value = *(((IntegerCallback*)callback)->value);
-                                        } else {
-                                            *(((IntegerCallback*)callback)->value) = (float)(((IntegerType*)snmprequest->varBindsCursor->value->value)->_value / 10);
-                                            value->_value = *(float*)(((IntegerCallback*)callback)->value) * 10;
+                            if(callback->type != snmprequest->varBindsCursor->value->type){
+                                // wrong data type to set..
+                                // BAD_VALUE
+                                Serial.println(F("VALUE-TYPE DOES NOT MATCH")); 
+                                SNMPOIDResponse* errorResponse = generateErrorResponse(BAD_VALUE, snmprequest->varBindsCursor->value->oid->_value);
+                                response->addErrorResponse(errorResponse, varBindIndex);
+                            } else {
+                                // actually set it
+                                switch(callback->type){
+                                    case STRING:
+                                        {
+                                            memcpy(*((StringCallback*)callback)->value, String(((OctetType*)snmprequest->varBindsCursor->value->value)->_value).c_str(), 32);// FIXME: this is VERY dangerous, i'm assuming the length of the source char*, this needs to change. for some reason strncpy didnd't work, need to look into this. the '25' also needs to be defined somewhere so this won't break;
+                                            *(*((StringCallback*)callback)->value + 31) = 0x0; // close off the dest string, temporary
+                                            OctetType* value = new OctetType(*((StringCallback*)callback)->value);
+                                            OIDResponse->value = value;
+                                            setOccurred = true;
                                         }
-                                        OIDResponse->value = value;
-                                        setOccurred = true;
-                                    }
-                                break;
+                                    break;
+                                    case INTEGER:
+                                        {
+                                            IntegerType* value = new IntegerType();
+                                            if(!((IntegerCallback*)callback)->isFloat){
+                                                *(((IntegerCallback*)callback)->value) = ((IntegerType*)snmprequest->varBindsCursor->value->value)->_value;
+                                                value->_value = *(((IntegerCallback*)callback)->value);
+                                            } else {
+                                                *(((IntegerCallback*)callback)->value) = (float)(((IntegerType*)snmprequest->varBindsCursor->value->value)->_value / 10);
+                                                value->_value = *(float*)(((IntegerCallback*)callback)->value) * 10;
+                                            }
+                                            OIDResponse->value = value;
+                                            setOccurred = true;
+                                        }
+                                    break;
+                                }
+                                response->addResponse(OIDResponse);
                             }
-                            response->addResponse(OIDResponse);
                         }
                     } else {
                         // not settable, send error
@@ -308,7 +356,9 @@ ValueCallback* SNMPAgent::findCallback(char* oid, bool next){
         while(true){
             if(!useNext){
                 memset(OIDBuf, 0, 50);
-                strcat(OIDBuf, oidPrefix);
+                if(!callbacksCursor->value->overwritePrefix){
+                    strcat(OIDBuf, oidPrefix);
+                }
                 strcat(OIDBuf, callbacksCursor->value->OID);
                 if(strcmp(OIDBuf, oid) == 0){
                     //  found
@@ -338,8 +388,9 @@ ValueCallback* SNMPAgent::findCallback(char* oid, bool next){
     return 0;
 }
 
-ValueCallback* SNMPAgent::addStringHandler(char* oid, char** value, bool isSettable){
+ValueCallback* SNMPAgent::addStringHandler(char* oid, char** value, bool isSettable, bool overwritePrefix){
     ValueCallback* callback = new StringCallback();
+    callback->overwritePrefix = overwritePrefix;
     if(isSettable) callback->isSettable = true;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
@@ -348,8 +399,9 @@ ValueCallback* SNMPAgent::addStringHandler(char* oid, char** value, bool isSetta
     return callback;
 }
 
-ValueCallback* SNMPAgent::addIntegerHandler(char* oid, int* value, bool isSettable){
+ValueCallback* SNMPAgent::addIntegerHandler(char* oid, int* value, bool isSettable, bool overwritePrefix){
     ValueCallback* callback = new IntegerCallback();
+    callback->overwritePrefix = overwritePrefix;
     if(isSettable) callback->isSettable = true;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
@@ -359,8 +411,9 @@ ValueCallback* SNMPAgent::addIntegerHandler(char* oid, int* value, bool isSettab
     return callback;
 }
 
-ValueCallback* SNMPAgent::addFloatHandler(char* oid, float* value, bool isSettable){
+ValueCallback* SNMPAgent::addFloatHandler(char* oid, float* value, bool isSettable, bool overwritePrefix){
     ValueCallback* callback = new IntegerCallback();
+    callback->overwritePrefix = overwritePrefix;
     if(isSettable) callback->isSettable = true;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
@@ -370,8 +423,9 @@ ValueCallback* SNMPAgent::addFloatHandler(char* oid, float* value, bool isSettab
     return callback;
 }
 
-ValueCallback* SNMPAgent::addTimestampHandler(char* oid, int* value, bool isSettable){
+ValueCallback* SNMPAgent::addTimestampHandler(char* oid, int* value, bool isSettable, bool overwritePrefix){
     ValueCallback* callback = new TimestampCallback();
+    callback->overwritePrefix = overwritePrefix;
     if(isSettable) callback->isSettable = true;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
@@ -380,8 +434,9 @@ ValueCallback* SNMPAgent::addTimestampHandler(char* oid, int* value, bool isSett
     return callback;
 }
 
-ValueCallback* SNMPAgent::addOIDHandler(char* oid, char* value){
+ValueCallback* SNMPAgent::addOIDHandler(char* oid, char* value, bool overwritePrefix){
     ValueCallback* callback = new OIDCallback();
+    callback->overwritePrefix = overwritePrefix;
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((OIDCallback*)callback)->value = value;
@@ -450,7 +505,22 @@ bool SNMPAgent::sortHandlers(){ // we want to sort our callbacks in order of OID
  
         while (ptr1->next != lptr)
         {
-            if (!sort_oid(ptr1->value->OID, ptr1->next->value->OID))
+            char OID1[100] = {0};
+            char OID2[100] = {0};
+
+            if(!ptr1->value->overwritePrefix){
+                strcat(OID1, oidPrefix);
+            }
+            strcat(OID1, ptr1->value->OID);
+
+
+            if(!ptr1->next->value->overwritePrefix){
+                strcat(OID2, oidPrefix);
+            }
+            strcat(OID2, ptr1->next->value->OID);
+
+
+            if (!sort_oid(OID1, OID2))
             { 
                 swap(ptr1, ptr1->next);
                 swapped = 1;
@@ -470,8 +540,8 @@ void SNMPAgent::swap(ValueCallbacks* one, ValueCallbacks* two){
 }
 
 bool SNMPAgent::sort_oid(char* oid1, char* oid2){ // returns true if oid1 EARLIER than oid2
-    uint16_t oid_nums_1[20] = {0}; // max 20 deep
-    uint16_t oid_nums_2[20] = {0}; // max 20 deep
+    uint16_t oid_nums_1[40] = {0}; // max 40 deep
+    uint16_t oid_nums_2[40] = {0}; // max 40 deep
 
     int i = 0; // current num_array index
     bool toBreak = false;
