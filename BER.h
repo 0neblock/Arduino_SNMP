@@ -335,27 +335,47 @@ class ComplexType: public BER_CONTAINER {
         // the buffer we get passed in is the complete ASN Container, including the type header.
         buf++; // Skip our own type
         _length = *buf;
+        // Serial.printf("%d, l\n", _length); // length should be treated as: if first byte is 0x8x, the x is how many bytes follow
         if(_length > 127){
             // do this
-            _length -= 128;
-            buf++;
-            _length = (_length*128) + (*buf-128);
+            int numBytes = _length &= 0x7F;
+            unsigned int special_length = 0;
+            for(int k = 0; k < numBytes; k++){
+                buf++;
+                special_length <<= 8;
+                // Serial.printf("%d, b\n", *buf);
+                special_length |= *buf;
+            }
+            _length = special_length;
         }
+        // Serial.printf("%d, l\n", _length);
         buf++;
         // now we are at the front of a list of one or many other types, lets do our loop
         unsigned char i = 0;
         while(i < _length){
             ASN_TYPE valueType = (ASN_TYPE)*buf;
             buf++; i++;
-            unsigned short valueLength = *buf;
-            bool doubleL = false;
+            unsigned int valueLength = *buf;
+            // Serial.print("valuelength: ");
+
+            // Serial.println(valueLength);
+            // Serial.printf("i: %d\n", i);
+            // Serial.printf("length: %d\n", _length);
+
+            int doubleL = 0;
             if(valueLength > 127){
                 // also do this.
-                valueLength -= 128;
-                buf++; i++;
-                valueLength = (valueLength*128) + (*buf-128);
-                Serial.println(F("DOUBLE LENGTH BYTES"));
-                doubleL = true;
+                int numBytes = valueLength &= 0x7F;
+                unsigned int special_length = 0;
+                for(int k = 0; k < numBytes; k++){
+                    buf++;
+                    i++;
+                    special_length <<= 8;
+                    // Serial.printf("%d, b\n", *buf);
+                    special_length |= *buf;
+                }
+                valueLength = special_length;
+                doubleL = numBytes;
             }
             buf++; i++;
             // Serial.print("Lenght:");
@@ -397,11 +417,8 @@ class ComplexType: public BER_CONTAINER {
                     newObj = new TimestampType();
                 break;
             }
-            if(doubleL){
-                newObj->fromBuffer(buf - 3); // if we had larger size, we need to give -3
-            } else {
-                newObj->fromBuffer(buf - 2);
-            }
+            newObj->fromBuffer(buf - (2+doubleL));
+            
             buf += valueLength; i+= valueLength;
             //newObj->fromBuffer(newValue);
 //            free(newValue);

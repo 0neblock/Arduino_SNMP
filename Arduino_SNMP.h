@@ -127,7 +127,7 @@ class SNMPAgent {
         }
     private:
         bool sort_oid(char*, char*);
-        unsigned char _packetBuffer[SNMP_PACKET_LENGTH];
+        unsigned char _packetBuffer[SNMP_PACKET_LENGTH*2];
         bool inline receivePacket(int length);
         SNMPOIDResponse* generateErrorResponse(ERROR_STATUS error, char* oid){
             SNMPOIDResponse* errorResponse = new SNMPOIDResponse();
@@ -166,8 +166,12 @@ bool SNMPAgent::loop(){
 
 bool inline SNMPAgent::receivePacket(int packetLength){
     if(!packetLength) return false;
-//    Serial.print("Received from: ");Serial.print(packetLength);Serial.print(" ");Serial.println(_udp->remoteIP());
-    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
+   Serial.print("Received from: ");Serial.print(packetLength);Serial.print(" ");Serial.println(_udp->remoteIP());
+   if(packetLength > SNMP_PACKET_LENGTH){
+       Serial.println("dropping packet");
+       return false;
+   }
+    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*2);
     int len = packetLength;
 //    int len = _udp->read(_packetBuffer, SNMP_PACKET_LENGTH);
     _udp->read(_packetBuffer, MIN(len, SNMP_PACKET_LENGTH));
@@ -320,18 +324,23 @@ bool inline SNMPAgent::receivePacket(int packetLength){
             varBindIndex++;
         }
 //        Serial.println("Sending UDP");
-        memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
+        memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*2);
         int length = response->serialise(_packetBuffer);
-        _udp->beginPacket(_udp->remoteIP(), _udp->remotePort());
-        _udp->write(_packetBuffer, length);
-        if(!_udp->endPacket()){
-            Serial.println(F("COULDN'T SEND PACKET"));
-            for(int i = 0;  i < length; i++){
-                Serial.print(_packetBuffer[i], HEX);
+        if(length <= SNMP_PACKET_LENGTH){
+            _udp->beginPacket(_udp->remoteIP(), _udp->remotePort());
+            _udp->write(_packetBuffer, length);
+            if(!_udp->endPacket()){
+                Serial.println(F("COULDN'T SEND PACKET"));
+                for(int i = 0;  i < length; i++){
+                    Serial.print(_packetBuffer[i], HEX);
+                }
+                Serial.print(F("Length: "));Serial.println(length);
+                Serial.print(F("Length of incoming: "));Serial.println(len);
             }
-            Serial.print(F("Length: "));Serial.println(length);
-            Serial.print(F("Length of incoming: "));Serial.println(len);
+        } else {
+            Serial.println("dropping packet");
         }
+        
         delete response;
     } else {
         Serial.println(F("CORRUPT PACKET"));

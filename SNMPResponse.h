@@ -88,8 +88,6 @@ bool SNMPResponse::addErrorResponse(SNMPOIDResponse* response, int index){
     responseConductor = responseConductor->next;
 }
 
-
-
 int SNMPResponse::serialise(unsigned char* buf){
     if(build()){
         return response->serialise(buf);
@@ -114,6 +112,7 @@ bool SNMPResponse::build(){
         varBind->addValueToList(responseConductor->value->oid);
         varBind->addValueToList(responseConductor->value->value);
         varBindList->addValueToList(varBind);
+        
         if(!responseConductor->next->value){
             break;
         }
