@@ -127,7 +127,7 @@ class SNMPAgent {
         }
     private:
         bool sort_oid(char*, char*);
-        unsigned char _packetBuffer[SNMP_PACKET_LENGTH*2];
+        unsigned char _packetBuffer[SNMP_PACKET_LENGTH*3];
         bool inline receivePacket(int length);
         SNMPOIDResponse* generateErrorResponse(ERROR_STATUS error, char* oid){
             SNMPOIDResponse* errorResponse = new SNMPOIDResponse();
@@ -171,7 +171,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
        Serial.println("dropping packet");
        return false;
    }
-    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*2);
+    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*3);
     int len = packetLength;
 //    int len = _udp->read(_packetBuffer, SNMP_PACKET_LENGTH);
     _udp->read(_packetBuffer, MIN(len, SNMP_PACKET_LENGTH));
@@ -324,9 +324,9 @@ bool inline SNMPAgent::receivePacket(int packetLength){
             varBindIndex++;
         }
 //        Serial.println("Sending UDP");
-        memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*2);
+        memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*3);
         int length = response->serialise(_packetBuffer);
-        if(length <= SNMP_PACKET_LENGTH){
+        if(length <= SNMP_PACKET_LENGTH*2){
             _udp->beginPacket(_udp->remoteIP(), _udp->remotePort());
             _udp->write(_packetBuffer, length);
             if(!_udp->endPacket()){

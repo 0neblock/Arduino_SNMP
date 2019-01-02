@@ -60,8 +60,8 @@ class SNMPTrap {
             delete packet;
             return false;
         }
-        unsigned char _packetBuffer[SNMP_PACKET_LENGTH];
-        memset(_packetBuffer, 0, SNMP_PACKET_LENGTH);
+        unsigned char _packetBuffer[SNMP_PACKET_LENGTH*3];
+        memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*3);
         int length = packet->serialise(_packetBuffer);
         delete packet;
         _udp->beginPacket(ip, 162);

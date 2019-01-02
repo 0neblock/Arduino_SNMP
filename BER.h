@@ -351,7 +351,7 @@ class ComplexType: public BER_CONTAINER {
         // Serial.printf("%d, l\n", _length);
         buf++;
         // now we are at the front of a list of one or many other types, lets do our loop
-        unsigned char i = 0;
+        unsigned int i = 1;
         while(i < _length){
             ASN_TYPE valueType = (ASN_TYPE)*buf;
             buf++; i++;
