@@ -416,6 +416,11 @@ class ComplexType: public BER_CONTAINER {
                 case TIMESTAMP:
                     newObj = new TimestampType();
                 break;
+
+                
+                default:
+                    newObj = new ComplexType(valueType);
+                break;
             }
             newObj->fromBuffer(buf - (2+doubleL));
             

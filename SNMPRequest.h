@@ -19,8 +19,8 @@ class SNMPRequest {
   public:
     SNMPRequest(){};
     ~SNMPRequest(){
-        delete varBinds;
-        delete SNMPPacket;
+        if(varBinds) delete varBinds;
+        if(SNMPPacket) delete SNMPPacket;
     };
     char* communityString;
     int version;
@@ -39,11 +39,11 @@ class SNMPRequest {
 };
 
 bool SNMPRequest::parseFrom(unsigned char* buf){
-    SNMPPacket = new ComplexType(STRUCTURE);
     if(buf[0] != 0x30) {
         isCorrupt = true;
         return false;
     }
+    SNMPPacket = new ComplexType(STRUCTURE);
     SNMPPacket->fromBuffer(buf);
     // we now have a full ASN.1 packet in SNMPPacket
     ValuesList* cursor = SNMPPacket->_values;

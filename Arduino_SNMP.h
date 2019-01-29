@@ -167,7 +167,7 @@ bool SNMPAgent::loop(){
 bool inline SNMPAgent::receivePacket(int packetLength){
     if(!packetLength) return false;
    Serial.print("Received from: ");Serial.print(packetLength);Serial.print(" ");Serial.println(_udp->remoteIP());
-   if(packetLength > SNMP_PACKET_LENGTH){
+   if(packetLength < 0 || packetLength > SNMP_PACKET_LENGTH){
        Serial.println("dropping packet");
        return false;
    }
@@ -345,15 +345,18 @@ bool inline SNMPAgent::receivePacket(int packetLength){
     } else {
         Serial.println(F("CORRUPT PACKET"));
         VarBindList* tempList = snmprequest->varBinds;
-        while(tempList->next){
+        if(tempList){
+            while(tempList->next){
+                delete tempList->value->oid;
+                delete tempList->value->value;
+                tempList = tempList->next;
+            }
             delete tempList->value->oid;
             delete tempList->value->value;
-            tempList = tempList->next;
         }
-        delete tempList->value->oid;
-        delete tempList->value->value;
     }
     delete snmprequest;
+
 //    //Serial.printf("Current heap size: %u\n", ESP.getFreeHeap());
 }
 
