@@ -166,7 +166,7 @@ bool SNMPAgent::loop(){
 
 bool inline SNMPAgent::receivePacket(int packetLength){
     if(!packetLength) return false;
-   Serial.print("Received from: ");Serial.print(packetLength);Serial.print(" ");Serial.println(_udp->remoteIP());
+//    Serial.print("Received from: ");Serial.print(packetLength);Serial.print(" ");Serial.println(_udp->remoteIP());
    if(packetLength < 0 || packetLength > SNMP_PACKET_LENGTH){
        Serial.println("dropping packet");
        return false;
@@ -180,7 +180,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
 // //        Serial.print(_packetBuffer[i], HEX);
 // //        Serial.print(" ");
 //     }
-    Serial.println(len);
+    // Serial.println(len);
     _udp->flush();
     _packetBuffer[len] = 0;
 //    Serial.println(_packetBuffer);

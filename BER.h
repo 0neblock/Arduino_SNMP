@@ -450,7 +450,7 @@ class ComplexType: public BER_CONTAINER {
             actualLength += length;
             conductor = conductor->next;
         }
-        printf("Length to return: %d\n", actualLength);
+        // printf("Length to return: %d\n", actualLength);
         if(actualLength > 127){
 //            Serial.println("TOO BIG");
             // bad, we have to add another byte and shift everything afterwards by 1 >>
