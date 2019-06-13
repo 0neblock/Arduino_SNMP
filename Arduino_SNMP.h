@@ -182,7 +182,7 @@ bool inline SNMPAgent::receivePacket(int packetLength) {
 						memcpy(*((StringCallback*)callback)->value, String(((OctetType*)snmpgetresponse->varBindsCursor->value->value)->_value).c_str(), 25);// FIXME: this is VERY dangerous, i'm assuming the length of the source char*, this needs to change. for some reason strncpy didnd't work, need to look into this. the '25' also needs to be defined somewhere so this won't break;
 						*(*((StringCallback*)callback)->value + 24) = 0x0; // close off the dest string, temporary
 						OctetType* value = new OctetType(*((StringCallback*)callback)->value);
-						Serial.print("STR value: ");
+						//Serial.print("STR value: ");
 						//	Serial.println(value);
 						delete value;
 						setOccurred = true;
