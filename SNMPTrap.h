@@ -58,12 +58,14 @@ class SNMPTrap {
         if(!build()){
             Serial.println("Failed Building packet..");
             delete packet;
+            packet = 0;
             return false;
         }
         unsigned char _packetBuffer[SNMP_PACKET_LENGTH*3];
         memset(_packetBuffer, 0, SNMP_PACKET_LENGTH*3);
         int length = packet->serialise(_packetBuffer);
         delete packet;
+        packet = 0;
         _udp->beginPacket(ip, 162);
         _udp->write(_packetBuffer, length);
         return _udp->endPacket();
