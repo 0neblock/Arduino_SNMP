@@ -68,7 +68,7 @@ void setup(){
     settableNumberTrap->addOIDPointer(changingNumberOID);
     settableNumberTrap->addOIDPointer(settableNumberOID);
 
-    settableNumberTrap->setIP(WiFi.localIP()); // Set our Destination IP
+    settableNumberTrap->setIP(WiFi.localIP()); // Set our Source IP
 
     snmp.sortHandlers();
 }
