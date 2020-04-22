@@ -208,6 +208,7 @@ bool inline SNMPAgent::receivePacket(int packetLength){
         
         SNMPResponse* response = new SNMPResponse();
         response->requestID = snmprequest->requestID;
+        response->version = snmprequest->version - 1;
         strncpy(response->communityString, snmprequest->communityString, 15);
         int varBindIndex = 1;
         snmprequest->varBindsCursor = snmprequest->varBinds;
