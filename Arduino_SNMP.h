@@ -52,6 +52,24 @@ class OIDCallback: public ValueCallback {
     char* value;
 };
 
+class Counter32Callback: public ValueCallback {
+  public:
+    Counter32Callback(): ValueCallback(ASN_TYPE::COUNTER32){};
+    uint32_t* value;
+};
+
+class Guage32Callback: public ValueCallback {
+  public:
+    Guage32Callback(): ValueCallback(ASN_TYPE::GUAGE32){};
+    uint32_t* value;
+};
+
+class Counter64Callback: public ValueCallback {
+  public:
+    Counter64Callback(): ValueCallback(ASN_TYPE::COUNTER64){};
+    uint64_t* value;
+};
+
 typedef struct ValueCallbackList {
     ~ValueCallbackList(){
         delete next;
@@ -104,7 +122,10 @@ class SNMPAgent {
         ValueCallback* addIntegerHandler(char* oid, int* value, bool isSettable = false, bool overwritePrefix = false);
         ValueCallback* addTimestampHandler(char* oid, int* value, bool isSettable = false, bool overwritePrefix = false);
         ValueCallback* addOIDHandler(char* oid, char* value, bool overwritePrefix = false);
-        
+        ValueCallback* addCounter64Handler(char* oid, uint64_t* value, bool overwritePrefix = false);
+        ValueCallback* addCounter32Handler(char* oid, uint32_t* value, bool overwritePrefix = false);
+        ValueCallback* addGuageHandler(char* oid, uint32_t* value, bool overwritePrefix);
+
         bool setUDP(UDP* udp);
         bool begin();
         bool begin(char*);
@@ -306,6 +327,15 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                     } else if(callback->type == OID){
                         OIDType* value = new OIDType((((OIDCallback*)callback)->value));
                         OIDResponse->value = value;
+                    } else if(callback->type == COUNTER64){
+                        Counter64* value = new Counter64(*((Counter64Callback*)callback)->value);
+                        OIDResponse->value = value;
+                    } else if(callback->type == COUNTER32){
+                        Counter32* value = new Counter32(*((Counter32Callback*)callback)->value);
+                        OIDResponse->value = value;
+                    } else if(callback->type == GUAGE32){
+                        Guage* value = new Guage(*((Guage32Callback*)callback)->value);
+                        OIDResponse->value = value;
                     }
                     response->addResponse(OIDResponse);
                 }
@@ -453,6 +483,36 @@ ValueCallback* SNMPAgent::addOIDHandler(char* oid, char* value, bool overwritePr
     callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     ((OIDCallback*)callback)->value = value;
+    addHandler(callback);
+    return callback;
+}
+
+ValueCallback* SNMPAgent::addCounter64Handler(char* oid, uint64_t* value, bool overwritePrefix){
+    ValueCallback* callback = new Counter64Callback();
+    callback->overwritePrefix = overwritePrefix;
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
+    strcpy(callback->OID, oid);
+    ((Counter64Callback*)callback)->value = value;
+    addHandler(callback);
+    return callback;
+}
+
+ValueCallback* SNMPAgent::addCounter32Handler(char* oid, uint32_t* value, bool overwritePrefix){
+    ValueCallback* callback = new Counter32Callback();
+    callback->overwritePrefix = overwritePrefix;
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
+    strcpy(callback->OID, oid);
+    ((Counter32Callback*)callback)->value = value;
+    addHandler(callback);
+    return callback;
+}
+
+ValueCallback* SNMPAgent::addGuageHandler(char* oid, uint32_t* value, bool overwritePrefix){
+    ValueCallback* callback = new Guage32Callback();
+    callback->overwritePrefix = overwritePrefix;
+    callback->OID = (char*)malloc((sizeof(char) * strlen(oid)) + 1);
+    strcpy(callback->OID, oid);
+    ((Guage32Callback*)callback)->value = value;
     addHandler(callback);
     return callback;
 }

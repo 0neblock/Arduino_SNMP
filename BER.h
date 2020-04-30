@@ -17,13 +17,18 @@ typedef enum ASN_TYPE_WITH_VALUE {
     // Complex
     STRUCTURE = 0x30,
     NETWORK_ADDRESS = 0x40,
+    COUNTER32 = 0x41,
+    GUAGE32 = 0x42, // USIGNED32
     TIMESTAMP = 0x43,
+    OPAQUE = 0x44,
+	COUNTER64 = 0x46,
     
     GetRequestPDU = 0xA0,
     GetNextRequestPDU = 0xA1,
     GetResponsePDU = 0xA2,
     SetRequestPDU = 0xA3,
     TrapPDU = 0xA4,
+    GetBulkRequestPDU = 0xA5,
     Trapv2PDU = 0xA7
     
 } ASN_TYPE;
@@ -315,6 +320,77 @@ class NullType: public BER_CONTAINER {
     }
 };
 
+
+class Counter64: public BER_CONTAINER {
+  public:
+    Counter64(): BER_CONTAINER(true, COUNTER64){};
+    Counter64(uint64_t value): _value(value), BER_CONTAINER(true, COUNTER64){};
+    ~Counter64(){};
+    uint64_t _value;
+    int serialise(unsigned char* buf){
+        // here we print out the BER encoded ASN.1 bytes, which includes type, length and value. we return the length of the entire block (TL&V) ni bytes;
+        unsigned char* ptr = buf;
+        *ptr = _type;
+        ptr++;
+        unsigned char* lengthPtr = ptr++;
+        if(_value != 0){
+            _length = 8;
+            *ptr++ = _value >> 56 & 0xFF;
+            *ptr++ = _value >> 48 & 0xFF;
+            *ptr++ = _value >> 40 & 0xFF;
+            *ptr++ = _value >> 32 & 0xFF;
+            *ptr++ = _value >> 24 & 0xFF;
+            *ptr++ = _value >> 16 & 0xFF;
+            *ptr++ = _value >> 8 & 0xFF;
+            *ptr++ = _value & 0xFF;
+        } else {
+            _length = 1;
+            *ptr = 0;
+        }
+        *lengthPtr = _length;
+        return _length + 2;
+    }
+    bool fromBuffer(unsigned char* buf){
+        buf++;// skip Type
+        _length = *buf;
+        buf++;
+        unsigned short tempLength = _length;
+//        _value = *buf; // TODO: make work for integers more than 255
+        _value = 0;
+        while(tempLength > 0){
+            _value = _value << 8;
+            _value = _value | *buf++;
+            tempLength--;
+        }
+        return true;
+    }
+    int getLength(){
+        return _length;
+    }
+};
+
+class Counter32: public IntegerType {
+  public:
+    Counter32(): IntegerType(){
+        _type = COUNTER32;
+    };
+    Counter32(unsigned int value): IntegerType(value){
+        _type = COUNTER32;
+    };
+    ~Counter32(){};
+};
+
+class Guage: public IntegerType { // Unsigned int
+  public:
+    Guage(): IntegerType(){
+        _type = GUAGE32;
+    };
+    Guage(unsigned int value): IntegerType(value){
+        _type = GUAGE32;
+    };
+    ~Guage(){};
+};
+
 typedef struct BER_LINKED_LIST {
     ~BER_LINKED_LIST(){
         delete next; next = 0;
@@ -392,6 +468,7 @@ class ComplexType: public BER_CONTAINER {
                 case GetNextRequestPDU:
                 case GetResponsePDU:
                 case SetRequestPDU:
+                case GetBulkRequestPDU:
                 case TrapPDU: // should never get trap, but put it in anyway
                 case Trapv2PDU:
                     newObj = new ComplexType(valueType);
@@ -416,7 +493,16 @@ class ComplexType: public BER_CONTAINER {
                 case TIMESTAMP:
                     newObj = new TimestampType();
                 break;
-
+                case COUNTER32:
+                    newObj = new Counter32();
+                break;
+                case GUAGE32:
+                    newObj = new Guage();
+                break;
+                case COUNTER64:
+                    newObj = new Counter64();
+                break;
+                /* OPAQUE = 0x44 */
                 
                 default:
                     newObj = new ComplexType(valueType);
