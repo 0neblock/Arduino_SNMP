@@ -1,6 +1,10 @@
 #ifndef BER_h
 #define BER_h
 
+#ifndef SNMP_OCTETSTRING_MAX_LENGTH
+    #define SNMP_OCTETSTRING_MAX_LENGTH 1024
+#endif
+
 #include <Arduino.h>
 #include <math.h>
 
@@ -10,10 +14,7 @@ typedef enum ASN_TYPE_WITH_VALUE {
     STRING = 0x04,
     NULLTYPE = 0x05,
     OID = 0x06,
-    
-    // derived
-    
-    
+
     // Complex
     STRUCTURE = 0x30,
     NETWORK_ADDRESS = 0x40,
@@ -22,7 +23,7 @@ typedef enum ASN_TYPE_WITH_VALUE {
     TIMESTAMP = 0x43,
     OPAQUE = 0x44,
 	COUNTER64 = 0x46,
-    
+
     GetRequestPDU = 0xA0,
     GetNextRequestPDU = 0xA1,
     GetResponsePDU = 0xA2,
@@ -30,14 +31,14 @@ typedef enum ASN_TYPE_WITH_VALUE {
     TrapPDU = 0xA4,
     GetBulkRequestPDU = 0xA5,
     Trapv2PDU = 0xA7
-    
 } ASN_TYPE;
 
-// primitive types inherits straight off the container, complex come off complexType
-// all primitives have to serialise themselves (type, length, data), to be put straight into the packet.
-// for deserialising, from the parent container we check the type, then create anobject of that type and calls deSerialise, passing in the data, which pulls it out and saves, and if complex, first split up it schildren into seperate BERs, then creates and passes them creates a child with it's data using the same process.
-
-// complex types have a linked list of BER_CONTAINERS to hold its' children.
+// Primitive types inherits straight off the container, complex come off complexType.
+// All primitives have to serialise themselves (type, length, data), to be put straight into the packet.
+// For deserialising from the parent container we check the type, then create an object of that type and call deSerialise,
+// passing in the data, which pulls it out and saves it.
+// If complexType, first split up its children into separate BERs, then passes the child with it's data using the same process.
+// Complex types have a linked list of BER_CONTAINERS to hold its' children.
 
 class BER_CONTAINER {
   public:
@@ -157,33 +158,69 @@ class OctetType: public BER_CONTAINER {
   public:
     OctetType(): BER_CONTAINER(true, STRING){};
     OctetType(char* value): BER_CONTAINER(true, STRING){
-        strncpy(_value, value, 32);
-        _value[31] = 0;
+        strncpy(_value, value, sizeof(_value));
+        _value[sizeof(_value)] = 0;
     };
     ~OctetType(){};
-    char _value[32];
+    char _value[SNMP_OCTETSTRING_MAX_LENGTH];
     int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
         char* ptr = (char*)buf;
-        *ptr = _type;
-        ptr++;
-        _length = sprintf(ptr + 1, "%s", _value);
-        *ptr = _length;
-        return _length + 2;
+        int numExtraBytes = 0;
+        char temp[SNMP_OCTETSTRING_MAX_LENGTH];
+        int valueLength = sprintf(temp, "%s", _value);
+
+        *ptr++ = _type; // Set the type identifier
+        // If > 127 first byte needs to be 0x8x where x is the how many bytes follow which defines string length
+        if (valueLength > 127)
+        {
+            numExtraBytes++; // Need an extra byte
+            if (valueLength > 256) // Max 65,536 characters, but likely will fail due to UDP packet fragmentation.
+            {
+                numExtraBytes++; // Need another extra byte to store the length
+            }
+            *ptr++ = (numExtraBytes | 0x80); // 0x8x where x is the number of bytes which provide the total string length
+            if (valueLength > 256){
+                *ptr++ = valueLength / 256;
+                valueLength = valueLength % 256;
+            }
+            *ptr++ = valueLength;
+        }
+        else 
+        {
+            *ptr++ = valueLength;
+        }
+        _length = sprintf(ptr, "%s", _value);
+        return _length + numExtraBytes + 2;
     }
     bool fromBuffer(unsigned char* buf){
-        buf++;// skip Type
+        buf++; // skip Type
         _length = *buf;
+        // length should be treated as: if first byte is 0x8x, the x is how many bytes follow
+        if (_length > 127)
+        {
+            int numBytes = _length &= 0x7F;
+            unsigned int special_length = 0;
+            for(int k = 0; k < numBytes; k++){
+                buf++;
+                special_length <<= 8;
+                special_length |= *buf;
+            }
+            _length = special_length;
+        }
         buf++;
-        memset(_value, 0, 32);
-        if(_length > 32){
-            strncpy(_value, (char*)buf, 31);
-        } else {
-            strncpy(_value, (char*)buf, _length);
+        memset(_value, 0, sizeof(_value));  // Null out _value
+        if (_length < sizeof(_value))
+        {
+            strncpy(_value, (char *)buf, _length);  // Copy buffer to Value, using length from ASN structure.
+        }
+        else
+        {
+            Serial.println(F("OctetString too large, adjust SNMP_OCTETSTRING_MAX_LENGTH. String Truncated."));
+            strncpy(_value, (char *)buf, 253);  // Copy truncated buffer to Value
         }
         return true;
     }
-    
     int getLength(){
         return _length;
     }

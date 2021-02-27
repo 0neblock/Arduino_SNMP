@@ -6,7 +6,13 @@
 #endif
 
 #ifndef SNMP_PACKET_LENGTH
-    #define SNMP_PACKET_LENGTH 484
+    #if defined(ESP32)
+        #define SNMP_PACKET_LENGTH 1500  // This will limit the size of packets which can be handled.
+    #elif defined(ESP8266)
+        #define SNMP_PACKET_LENGTH 968  // This will limit the size of packets which can be handled. ESP8266 is unstable and crashes as this value approaches or exceeds1024. This appears to be a problem in the underlying WiFi or UDP implementation
+    #else
+        #define SNMP_PACKET_LENGTH 484  // This value may need to be made smaller for lower memory devices. This will limit the size of packets which can be handled.
+    #endif
 #endif
 
 #define MIN(X, Y) ((X < Y) ? X : Y)
@@ -277,9 +283,9 @@ bool inline SNMPAgent::receivePacket(int packetLength){
                                 switch(callback->type){
                                     case STRING:
                                         {
-                                            memcpy(*((StringCallback*)callback)->value, String(((OctetType*)snmprequest->varBindsCursor->value->value)->_value).c_str(), 32);// FIXME: this is VERY dangerous, i'm assuming the length of the source char*, this needs to change. for some reason strncpy didnd't work, need to look into this. the '25' also needs to be defined somewhere so this won't break;
-                                            *(*((StringCallback*)callback)->value + 31) = 0x0; // close off the dest string, temporary
-                                            OctetType* value = new OctetType(*((StringCallback*)callback)->value);
+                                            // Note: Requires that the size of the variable used to store the response is big enough. The max string length is currently SNMP_OCTETSTRING_MAX_LENGTH
+                                            strncpy(*((StringCallback *)callback)->value, ((OctetType *)snmprequest->varBindsCursor->value->value)->_value, strlen(((OctetType *)snmprequest->varBindsCursor->value->value)->_value));
+                                            OctetType *value = new OctetType(*((StringCallback *)callback)->value);
                                             OIDResponse->value = value;
                                             setOccurred = true;
                                         }
