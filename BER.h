@@ -193,10 +193,10 @@ class OIDType: public BER_CONTAINER {
   public:
     OIDType(): BER_CONTAINER(true, OID){};
     OIDType(char* value): BER_CONTAINER(true, OID){
-        strncpy(_value, value, 50);
+        strncpy(_value, value, 128);
     };
     ~OIDType(){};
-    char _value[50];
+    char _value[128];
     int serialise(unsigned char* buf){
         // here we print out the BER encoded ASN.1 bytes, which includes type, length and value.
         char* ptr = (char*)buf;
@@ -252,7 +252,7 @@ class OIDType: public BER_CONTAINER {
         _length = *buf;
         buf++;
         buf++;
-        memset(_value, 0, 50);
+        memset(_value, 0, 128);
         _value[0] = '.';
         _value[1] = '1';
         _value[2] = '.';
