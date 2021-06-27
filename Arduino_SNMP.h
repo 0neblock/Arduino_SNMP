@@ -11,7 +11,7 @@
 
 #define MIN(X, Y) ((X < Y) ? X : Y)
 
-#include <UDP.h>
+#include <Udp.h>
 
 #include "BER.h"
 #include "VarBinds.h"
