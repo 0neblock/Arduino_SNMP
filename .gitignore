@@ -1,0 +1,12 @@
+tests/test.out
+tests/build/
+cmake-build-debug
+cmake-build-debug-gcc10
+.idea
+CMakeFiles
+build
+cmake-build-release-gcc10/Arduino_SNMP2.cbp
+cmake-build-release-gcc10/cmake_install.cmake
+cmake-build-release-gcc10/CMakeCache.txt
+cmake-build-release-gcc10/MOCK
+cmake-build-release-gcc10/Makefile
