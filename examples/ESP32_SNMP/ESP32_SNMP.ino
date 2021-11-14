@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include <Arduino_SNMP.h>
+#include <SNMP_Agent.h>
 #include <SNMPTrap.h>
 
 const char* ssid = "SSID";

@@ -5,7 +5,7 @@ TEST_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name mock.cpp \! -name CM
 TEST_OBJS := $(TEST_SRCS:%=$(BUILD_DIR)/%.o)
 TEST_DEPS := $(TEST_OBJS:.o=.d)
 
-MOCK_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name Arduino_SNMP.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
+MOCK_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name SNMP_Agent.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
 MOCK_OBJS := $(MOCK_SRCS:%=$(BUILD_DIR)/%.o)
 MOCK_DEPS := $(MOCK_OBJS:.o=.d)
 
