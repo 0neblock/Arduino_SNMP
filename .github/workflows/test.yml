@@ -18,5 +18,8 @@ jobs:
     - name: run tests
       run: |
         cd tests
-        cat Makefile
         make test
+    - name: compile example
+      run: |
+        cd tests
+        make example

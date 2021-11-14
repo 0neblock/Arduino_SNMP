@@ -1,5 +1,5 @@
 BUILD_DIR ?= ./build/build
-SRC_DIRS ?= ../src .
+SRC_DIRS ?= ../src . ../examples
 
 TEST_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name mock.cpp \! -name CMakeCXXCompilerId.cpp)
 TEST_OBJS := $(TEST_SRCS:%=$(BUILD_DIR)/%.o)
@@ -8,6 +8,9 @@ TEST_DEPS := $(TEST_OBJS:.o=.d)
 MOCK_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name SNMP_Agent.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
 MOCK_OBJS := $(MOCK_SRCS:%=$(BUILD_DIR)/%.o)
 MOCK_DEPS := $(MOCK_OBJS:.o=.d)
+
+EXAMPLE_SRCS := $(shell find $(SRC_DIRS) \( -name \*.cpp -o -name \*.ino \) \! -name mock.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
+EXAMPLE_OBJS := $(EXAMPLE_SRCS:%=$(BUILD_DIR)/%.o)
 
 CC = c++
 CXX = c++
@@ -33,13 +36,22 @@ $(BUILD_DIR)/test: $(TEST_OBJS)
 $(BUILD_DIR)/mock: $(MOCK_OBJS)
 	$(CC) $(MOCK_OBJS) -o $@ $(LDFLAGS)
 
+$(BUILD_DIR)/example: $(EXAMPLE_OBJS)
+	$(CC) $(EXAMPLE_OBJS) -o $@ $(LDFLAGS)
 # c++ source
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	
+# inosource
+$(BUILD_DIR)/%.ino.o: %.ino
+	$(MKDIR_P) $(dir $@)
+	cp $< $@.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"required" -c $@.cpp -o $@
+	rm $@.cpp
 
 
-.PHONY: clean test benchmark
+.PHONY: clean test benchmark example
 
 clean:
 	$(RM) -r ./build
@@ -52,7 +64,9 @@ test: $(BUILD_DIR)/test
 
 mock: $(BUILD_DIR)/mock
 	$(BUILD_DIR)/mock
+	
+example: $(BUILD_DIR)/example
 
--include $(MOCK_DEPS) $(TEST_DEPS)
+-include $(MOCK_DEPS) $(TEST_DEPS) 
 
 MKDIR_P ?= mkdir -p
