@@ -30,7 +30,7 @@ add_executable(MOCK
 add_executable(TESTS
         tests/required/IPAddress.cpp
         tests/tests.cpp
-        src/Arduino_SNMP.cpp
+        src/SNMP_Agent.cpp
         src/BERDecode.cpp
         src/BEREncode.cpp
         src/SNMPPacket.cpp
