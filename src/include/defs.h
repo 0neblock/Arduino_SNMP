@@ -115,7 +115,7 @@ int32_t         sysServices;            /* .1.3.6.1.2.1.1.7.0 */
         #define SNMP_LOGW(...) printf(__VA_ARGS__)
         #define SNMP_LOGE(...) printf(__VA_ARGS__)
         
-    #if (DEBUG ==2)
+    #elif (DEBUG ==2)
         #define SNMP_LOGD(...)
         #define SNMP_LOGI(...) printf(__VA_ARGS__)
         #define SNMP_LOGW(...) printf(__VA_ARGS__)
