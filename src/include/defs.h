@@ -79,26 +79,55 @@ typedef enum ERROR_STATUS_WITH_VALUE {
 // Used for situations where in V2 an error exists but in V1 a less-specific error exists that isn't GEN_ERR
 #define SNMP_ERROR_VERSION_CTRL_DEF(error, version, elseError) ((version == SNMP_VERSION_1 && error > SNMP_V1_MAX_ERROR) ? SNMP_ERROR_VERSION_CTRL(elseError, version) : error)
 
+// FC1213 OIDs
+#define RFC1213_OID_sysDescr            (char*)(".1.3.6.1.2.1.1.1.0")
+#define RFC1213_OID_sysObjectID         (char*)(".1.3.6.1.2.1.1.2.0")
+#define RFC1213_OID_sysUpTime           (char*)(".1.3.6.1.2.1.1.3.0")
+#define RFC1213_OID_sysContact          (char*)(".1.3.6.1.2.1.1.4.0")
+#define RFC1213_OID_sysName             (char*)(".1.3.6.1.2.1.1.5.0")
+#define RFC1213_OID_sysLocation         (char*)(".1.3.6.1.2.1.1.6.0")
+#define RFC1213_OID_sysServices         (char*)(".1.3.6.1.2.1.1.7.0")
+
+typedef struct RFC1213SystemStruct
+{
+char*           sysDescr;               /* .1.3.6.1.2.1.1.1.0 */
+char*           sysObjectID;            /* .1.3.6.1.2.1.1.2.0 */
+uint32_t        sysUpTime;              /* .1.3.6.1.2.1.1.3.0 */
+char*           sysContact;             /* .1.3.6.1.2.1.1.4.0 */
+char*           sysName;                /* .1.3.6.1.2.1.1.5.0 */
+char*           sysLocation;            /* .1.3.6.1.2.1.1.6.0 */
+int32_t         sysServices;            /* .1.3.6.1.2.1.1.7.0 */
+} RFC1213_list;
+
+// DEBUG
 #ifndef COMPILING_TESTS
-
-#include <esp_log.h>
-
+    #include <esp_log.h>
+    
     #define SNMP_LOGD(...) ESP_LOGD(SNMP_TAG, __VA_ARGS__)
     #define SNMP_LOGI(...) ESP_LOGI(SNMP_TAG, __VA_ARGS__)
     #define SNMP_LOGW(...) ESP_LOGW(SNMP_TAG, __VA_ARGS__)
     #define SNMP_LOGE(...) ESP_LOGE(SNMP_TAG, __VA_ARGS__)
-
+    
 #else
-
-    #ifdef DEBUG
+    #if (DEBUG ==1)
         #define SNMP_LOGD(...) printf(__VA_ARGS__)
+        #define SNMP_LOGI(...) printf(__VA_ARGS__)
+        #define SNMP_LOGW(...) printf(__VA_ARGS__)
+        #define SNMP_LOGE(...) printf(__VA_ARGS__)
+        
+    #if (DEBUG ==2)
+        #define SNMP_LOGD(...)
+        #define SNMP_LOGI(...) printf(__VA_ARGS__)
+        #define SNMP_LOGW(...) printf(__VA_ARGS__)
+        #define SNMP_LOGE(...) printf(__VA_ARGS__)
+        
     #else
         #define SNMP_LOGD(...)
+        #define SNMP_LOGI(...)
+        #define SNMP_LOGW(...)
+        #define SNMP_LOGE(...)
+        
     #endif
-    #define SNMP_LOGI(...) printf(__VA_ARGS__)
-    #define SNMP_LOGW(...) printf(__VA_ARGS__)
-    #define SNMP_LOGE(...) printf(__VA_ARGS__)
-
 #endif
 
 #endif
