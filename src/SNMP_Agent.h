@@ -64,7 +64,12 @@ class SNMPAgent {
         bool begin();
         bool begin(const char* oidPrefix);
         enum SNMP_ERROR_RESPONSE loop();
-
+        
+        short _AgentUDPport = 161;
+        void setUDPport(short port){
+	        _AgentUDPport = port;
+        }
+        
         bool setOccurred = false;
         void resetSetOccurred(){
             setOccurred = false;
