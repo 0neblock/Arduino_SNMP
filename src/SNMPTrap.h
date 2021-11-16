@@ -32,7 +32,9 @@ class SNMPTrap : public SNMPPacket {
 
     TimestampCallback* uptimeCallback = nullptr;
     short genericTrap = 6;
-    short specificTrap;
+    short specificTrap = 1;
+    
+    short _TrapUDPport = 162;
     
     bool inform = false;
 
@@ -64,6 +66,10 @@ class SNMPTrap : public SNMPPacket {
 
     void setIP(IPAddress ip){ // sets our IP
         agentIP = ip;
+    }
+    
+    void setUDPport(short port){
+	    _TrapUDPport = port;
     }
     
     void setUDP(UDP* udp){
@@ -118,7 +124,7 @@ class SNMPTrap : public SNMPPacket {
 
         if(length <= 0) return false;
 
-        _udp->beginPacket(ip, 162);
+        _udp->beginPacket(ip, _TrapUDPport);
         _udp->write(_packetBuffer, length);
         return _udp->endPacket();
     }
