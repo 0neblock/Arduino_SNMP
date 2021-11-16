@@ -69,7 +69,7 @@ class SNMPTrap : public SNMPPacket {
     }
     
     void setUDPport(short port){
-	    _TrapUDPport = port;
+	_TrapUDPport = port;
     }
     
     void setUDP(UDP* udp){
