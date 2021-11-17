@@ -1,6 +1,8 @@
 #ifndef SNMP_DEFS_h
 #define SNMP_DEFS_h
 
+#include <stdint.h>
+
 typedef enum SNMP_ERROR_RESPONSE {
     SNMP_NO_UDP = -10,
     SNMP_REQUEST_TOO_LARGE = -5,
