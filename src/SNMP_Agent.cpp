@@ -191,7 +191,7 @@ std::list<SNMPAgent*> SNMPAgent::agents = std::list<SNMPAgent*>();
 bool SNMPAgent::restartUDP() {
     for(auto udp : _udp){
         udp->stop();
-        udp->begin(161);
+        udp->begin(_AgentUDPport);
     }
     return true;
 }

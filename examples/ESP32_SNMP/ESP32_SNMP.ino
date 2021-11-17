@@ -1,4 +1,9 @@
-#include <WiFi.h>
+#if defined (ESP8266)
+    #include <ESP8266WiFi.h>        // ESP8266 Core WiFi Library         
+#else
+    #include <WiFi.h>               // ESP32 Core WiFi Library    
+#endif
+
 #include <WiFiUdp.h>
 #include <SNMP_Agent.h>
 #include <SNMPTrap.h>
