@@ -81,7 +81,7 @@ void setup(){
     
     // Setup read/write string
     changingString = (char*)malloc(25 * sizeof(char));
-    snprintf(changingString, 25, "This string can be changed");
+    snprintf(changingString, 25, "This is changeable");
     snmp.addReadWriteStringHandler(".1.3.6.1.4.1.5.12", &changingString, 25, true);
 
 
