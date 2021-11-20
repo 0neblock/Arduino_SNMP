@@ -341,7 +341,7 @@ TEST_CASE( "sort/remove handlers ", "[snmp]"){
 TEST_CASE( "SNMPTraps ", "[snmp]"){
     SNMPTrap* settableNumberTrap = new SNMPTrap("public", SNMP_VERSION_1);
 
-    int tensOfMillisCounter = 10;
+    uint32_t tensOfMillisCounter = 10;
     int changingNumber = 12;
     int settableNumber = 78;
 
