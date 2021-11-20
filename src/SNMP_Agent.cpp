@@ -8,7 +8,6 @@ bool SNMPAgent::setUDP(UDP* udp){
     return true;
 }
 
-
 bool SNMPAgent::begin(){
     this->restartUDP();
     return true;
