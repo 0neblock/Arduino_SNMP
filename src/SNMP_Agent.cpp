@@ -111,7 +111,7 @@ ValueCallback* SNMPAgent::addIntegerHandler(char* oid, int* value, bool isSettab
     return addHandler(new IntegerCallback(oidType, value), isSettable);
 }
 
-ValueCallback* SNMPAgent::addTimestampHandler(char* oid, int* value, bool isSettable, bool overwritePrefix){
+ValueCallback* SNMPAgent::addTimestampHandler(char* oid, uint32_t* value, bool isSettable, bool overwritePrefix){
     if(!value) return nullptr;
 
     SortableOIDType* oidType = buildOIDWithPrefix(oid, overwritePrefix);
