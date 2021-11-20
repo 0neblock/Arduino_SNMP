@@ -11,13 +11,12 @@
 #include <stdint.h>
 #include <string>
 
-#ifndef COMPILING_TESTS
-    #include <Arduino.h>
-#endif
-
 #ifdef COMPILING_TESTS
     #include "tests/required/IPAddress.h"
     #include "tests/required/UDP.h"
+#else
+    #include <Arduino.h>
+    #include "IPAddress.h"
 #endif
 
 #include <memory>
