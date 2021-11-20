@@ -95,11 +95,11 @@ typedef enum ERROR_STATUS_WITH_VALUE {
 #define RFC1213_OID_sysServices         (char*)(".1.3.6.1.2.1.1.7.0")
 
 typedef struct RFC1213SystemStruct {
-        std::string     sysDescr;               /* .1.3.6.1.2.1.1.1.0   Read-only   */
-        std::string     sysObjectID;            /* .1.3.6.1.2.1.1.2.0   Read-only   */
+        char*           sysDescr;               /* .1.3.6.1.2.1.1.1.0   Read-only   */
+        char*           sysObjectID;            /* .1.3.6.1.2.1.1.2.0   Read-only   */
         uint32_t        sysUpTime;              /* .1.3.6.1.2.1.1.3.0   Read-only   */
-        std::string     sysContact;             /* .1.3.6.1.2.1.1.4.0   Read-only   */
-        std::string     sysName;                /* .1.3.6.1.2.1.1.5.0   Read-only   */
+        char*           sysContact;             /* .1.3.6.1.2.1.1.4.0   Read-only   */
+        char*           sysName;                /* .1.3.6.1.2.1.1.5.0   Read-only   */
         char*           sysLocation;            /* .1.3.6.1.2.1.1.6.0   Read-Write  */
         int32_t         sysServices;            /* .1.3.6.1.2.1.1.7.0   Read-only   */
     } RFC1213_list;
