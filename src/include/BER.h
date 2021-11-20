@@ -298,7 +298,6 @@ class Guage: public IntegerType { // Unsigned int
 
 };
 
-
 class ComplexType: public BER_CONTAINER {
   public:
     explicit ComplexType(ASN_TYPE type): BER_CONTAINER(type) {};
@@ -316,7 +315,5 @@ class ComplexType: public BER_CONTAINER {
   private:
     static std::shared_ptr<BER_CONTAINER> createObjectForType(ASN_TYPE valueType);
 };
-
-
 
 #endif
