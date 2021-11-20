@@ -19,6 +19,12 @@ bool SNMPAgent::begin(const char* prefix){
     return this->begin();
 }
 
+void SNMPAgent::stop(){
+    for(auto udp : _udp){
+        udp->stop();
+    }
+}
+
 SNMP_ERROR_RESPONSE SNMPAgent::loop(){
     for(auto udp : _udp){
         int packetLength = udp->parsePacket();
