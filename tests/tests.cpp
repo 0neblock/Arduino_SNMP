@@ -382,7 +382,7 @@ TEST_CASE( "SNMPInform ", "[snmp]"){
     SNMPTrap* settableNumberTrap = new SNMPTrap("public", SNMP_VERSION_2C);
     settableNumberTrap->setInform(true);
 
-    int tensOfMillisCounter = 10;
+    uint32_t tensOfMillisCounter = 10;
     int changingNumber = 12;
     int settableNumber = 78;
 
