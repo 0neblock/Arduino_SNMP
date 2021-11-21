@@ -45,7 +45,7 @@ class SNMPManager {
     UDP *udp;
 
     snmp_request_id_t
-    send_polling_request(const SNMPDevice *device, const std::vector<ValueCallbackContainer *> &callbacks);
+    send_polling_request(const SNMPDevice *constdevice, std::array<ValueCallbackContainer *, SNMPREQUEST_VARBIND_COUNT> &callbacks);
 
     snmp_request_id_t prepare_next_polling_request();
 

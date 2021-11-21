@@ -18,10 +18,10 @@
 
 void SNMPManager::loop() {
     // Put on a timer
-    this->last_processed = millis();
     if (millis() - this->last_processed > 1000) {
         teardown_old_requests();
         prepare_next_polling_request();
+        this->last_processed = millis();
     }
 
     process_incoming_packets();
@@ -31,18 +31,17 @@ snmp_request_id_t SNMPManager::prepare_next_polling_request() {
     // Loop through our pollers, find the first one that needs to be polled again,
     // Use its device to et the next n callbacks, then send request
     const SNMPDevice *device = nullptr;
-    std::vector<ValueCallbackContainer *> callbacks;
-    callbacks.reserve(SNMPREQUEST_VARBIND_COUNT);
+    std::array<ValueCallbackContainer *, SNMPREQUEST_VARBIND_COUNT> callbacks = {nullptr};
 
     int callbackCount = 0;
     for (auto &container : pollingCallbacks) {
         if (device == nullptr || container.agentDevice == device) {
             if (container.pollingInfo->should_poll()) {
                 device = container.agentDevice;
-                callbacks.push_back(&container);
+                callbacks[callbackCount++] = &container;
                 // max SNMPREQUEST_VARBIND_COUNT varbinds per packet
                 // TODO: calculate as we go the assumed size of the packet, up to a limit
-                if (++callbackCount == SNMPREQUEST_VARBIND_COUNT) continue;
+                if (callbackCount == SNMPREQUEST_VARBIND_COUNT) continue;
             }
         }
     }
@@ -55,7 +54,7 @@ snmp_request_id_t SNMPManager::prepare_next_polling_request() {
 }
 
 snmp_request_id_t SNMPManager::send_polling_request(const SNMPDevice *const device,
-                                                    const std::vector<ValueCallbackContainer *> &callbacks) {
+                                                    std::array<ValueCallbackContainer *, SNMPREQUEST_VARBIND_COUNT> &callbacks) {
     // Should only call if we know we're going to send a request
     SNMP_LOGD("send_polling_request: %lu", callbacks.size());
     SNMPRequest request(GetRequestPDU);
@@ -63,7 +62,8 @@ snmp_request_id_t SNMPManager::send_polling_request(const SNMPDevice *const devi
     request.setVersion(device->_version);
     request.setCommunityString(device->_community);
 
-    for (const auto &callback : callbacks) {
+    for (const auto callback : callbacks) {
+        if(callback == nullptr) break;
         request.addValueCallback(callback->operator->());
     }
 
@@ -83,6 +83,7 @@ snmp_request_id_t SNMPManager::send_polling_request(const SNMPDevice *const devi
 
         // Record tracking
         for (const auto &callback : callbacks) {
+            if(callback == nullptr) break;
             callback->pollingInfo->send(request_id);
         }
         this->liveRequests.insert({request_id, GetRequestPDU});
