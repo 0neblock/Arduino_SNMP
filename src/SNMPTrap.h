@@ -4,94 +4,97 @@
 #ifndef SNMPTrap_h
 #define SNMPTrap_h
 
-#include <list>
+#include "include/SNMPPacket.h"
 #include "include/ValueCallbacks.h"
 #include "include/defs.h"
-#include "include/SNMPPacket.h"
+#include <list>
 
 #include <stdlib.h>
 
 #ifdef COMPILING_TESTS
-    #include "tests/required/IPAddress.h"
-    #include "tests/required/UDP.h"
+
+#include "tests/required/IPAddress.h"
+#include "tests/required/UDP.h"
+
 #endif
 
 class SNMPTrap : public SNMPPacket {
   public:
-    SNMPTrap(const char* community, SNMP_VERSION version){
+    SNMPTrap(const char *community, SNMP_VERSION version) {
         this->setVersion(version);
         // Version two will use the SNMPPacket builder which uses the member pduType
         // Version one will use special builder with hardcoded PDU Type
         this->setPDUType(Trapv2PDU);
         this->setCommunityString(community);
     };
-    virtual ~SNMPTrap();
-    
-    IPAddress agentIP;
-    OIDType* trapOID = nullptr;
 
-    TimestampCallback* uptimeCallback = nullptr;
+    virtual ~SNMPTrap();
+
+    IPAddress agentIP;
+    OIDType *trapOID = nullptr;
+
+    TimestampCallback *uptimeCallback = nullptr;
     short genericTrap = 6;
     short specificTrap = 1;
-    
+
     short trapUdpPort = 162;
-    
+
     bool inform = false;
 
-    bool setInform(bool inf){
+    bool setInform(bool inf) {
         this->inform = inf;
         ASN_TYPE pduType = this->packetPDUType;
-        switch(this->snmpVersion){
+        switch (this->snmpVersion) {
             case SNMP_VERSION_1:
                 pduType = TrapPDU;
-            break;
+                break;
             case SNMP_VERSION_2C:
                 pduType = this->inform ? InformRequestPDU : Trapv2PDU;
-            break;
+                break;
             default:
-            break;
+                break;
         }
         this->setPDUType(pduType);
         return true;
     }
     // the setters that need to be configured for each trap.
-    
-    void setTrapOID(OIDType* oid){
+
+    void setTrapOID(OIDType *oid) {
         trapOID = oid;
     }
-    
-    void setSpecificTrap(short num){
+
+    void setSpecificTrap(short num) {
         specificTrap = num;
     }
 
-    void setIP(const IPAddress& ip){ // sets our IP
+    void setIP(const IPAddress &ip) {// sets our IP
         agentIP = ip;
     }
-    
-    void setUDPport(short port){
+
+    void setUDPport(short port) {
         trapUdpPort = port;
     }
-    
-    void setUDP(UDP* udp){
+
+    void setUDP(UDP *udp) {
         _udp = udp;
     }
-    
-    void setUptimeCallback(TimestampCallback* uptime){
+
+    void setUptimeCallback(TimestampCallback *uptime) {
         uptimeCallback = uptime;
     }
-    
-    void addOIDPointer(ValueCallback* callback);
-    
-    UDP* _udp = nullptr;
 
-    bool buildForSending(){
+    void addOIDPointer(ValueCallback *callback);
+
+    UDP *_udp = nullptr;
+
+    bool buildForSending() {
         // This is the start of a fresh send, we're going to reset our requestID, and build the packet
         this->setRequestID(SNMPPacket::generate_request_id());
 
         // Flow for v2Trap/v2Inform is SNMPPacket::build()  -> SNMPTrap::generateVarBindList() -> v2 logic
         // flow for v1Trap is          SNMPTrap::build()    -> SNMPTrap::generateVarBindList() -> v1 logic
 
-        if(this->snmpVersion == SNMP_VERSION_1){
+        if (this->snmpVersion == SNMP_VERSION_1) {
             // Version 1 needs a special structure, so we overwrite the building part
             return this->build();
         } else {
@@ -100,21 +103,21 @@ class SNMPTrap : public SNMPPacket {
         }
     }
 
-    bool sendTo(const IPAddress& ip, bool skipBuild = false){
+    bool sendTo(const IPAddress &ip, bool skipBuild = false) {
         bool buildStatus = true;
-        if(!skipBuild) {
+        if (!skipBuild) {
             buildStatus = this->buildForSending();
         }
 
-        if(!_udp){
+        if (!_udp) {
             return false;
         }
 
-        if(!this->packet){
+        if (!this->packet) {
             return false;
         }
 
-        if(!buildStatus){
+        if (!buildStatus) {
             SNMP_LOGW("Failed Building packet..");
             return false;
         }
@@ -122,7 +125,7 @@ class SNMPTrap : public SNMPPacket {
         uint8_t _packetBuffer[MAX_SNMP_PACKET_LENGTH] = {0};
         int length = packet->serialise(_packetBuffer, MAX_SNMP_PACKET_LENGTH);
 
-        if(length <= 0) return false;
+        if (length <= 0) return false;
 
         _udp->beginPacket(ip, trapUdpPort);
         _udp->write(_packetBuffer, length);
@@ -130,12 +133,12 @@ class SNMPTrap : public SNMPPacket {
     }
 
   protected:
-    std::list<ValueCallback*> callbacks;
+    std::list<ValueCallback *> callbacks;
 
     std::shared_ptr<ComplexType> generateVarBindList() override;
 
-    OIDType* timestampOID = new OIDType(".1.3.6.1.2.1.1.3.0");
-    OIDType* snmpTrapOID  = new OIDType(".1.3.6.1.2.1.1.2.0");
+    OIDType *timestampOID = new OIDType(".1.3.6.1.2.1.1.3.0");
+    OIDType *snmpTrapOID = new OIDType(".1.3.6.1.2.1.1.2.0");
 
     friend class ValueCallback;
 

@@ -4,8 +4,9 @@
 #ifdef COMPILING_TESTS
 
 #include "UDP.h"
-class WiFiUDP: public UDP {
-    
+
+class WiFiUDP : public UDP {
+
 };
 
 #endif

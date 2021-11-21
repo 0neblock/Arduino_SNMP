@@ -2,15 +2,16 @@
 #include <string>
 
 
-static SNMP_PERMISSION getPermissionOfRequest(const SNMPPacket& request, const std::string& _community, const std::string& _readOnlyCommunity){
+static SNMP_PERMISSION getPermissionOfRequest(const SNMPPacket &request, const std::string &_community,
+                                              const std::string &_readOnlyCommunity) {
     SNMP_PERMISSION requestPermission = SNMP_PERM_NONE;
     SNMP_LOGD("communitystring in packet: %s\n", request.communityString.c_str());
 
-    if(_readOnlyCommunity != "" && _readOnlyCommunity == request.communityString) { // snmprequest->version != 1
+    if (_readOnlyCommunity != "" && _readOnlyCommunity == request.communityString) {// snmprequest->version != 1
         requestPermission = SNMP_PERM_READ_ONLY;
     }
 
-    if(_community == request.communityString) { // snmprequest->version != 1
+    if (_community == request.communityString) {// snmprequest->version != 1
         requestPermission = SNMP_PERM_READ_WRITE;
     }
     return requestPermission;
@@ -20,40 +21,43 @@ SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *respons
                                  std::deque<ValueCallbackContainer> &callbacks, const std::string &_community,
                                  const std::string &_readOnlyCommunity,
                                  std::unordered_map<snmp_request_id_t, ASN_TYPE> &liveRequests, informCB informCallback,
-                                 responseCB responseCallback, void *ctx, const SNMPDevice& device) {
+                                 responseCB responseCallback, void *ctx, const SNMPDevice &device) {
     // we can't type the incoming packet, so we only type the packets we send out
     SNMPPacket incomingPacket;
 
     SNMP_PACKET_PARSE_ERROR parseResult = incomingPacket.parseFrom(buffer, packetLength);
-    if(parseResult <= 0){
+    if (parseResult <= 0) {
         SNMP_LOGW("Received Error code: %d when attempting to parse\n", parseResult);
         return SNMP_REQUEST_INVALID;
     }
 
     SNMP_LOGD("Valid SNMP Packet!\n");
 
-    if(incomingPacket.packetPDUType == GetResponsePDU){
+    if (incomingPacket.packetPDUType == GetResponsePDU) {
         SNMP_LOGD("Received GetResponse! requestID: %u\n", incomingPacket.requestID);
         auto matchingRequest = liveRequests.find(incomingPacket.requestID);
-        if(matchingRequest != liveRequests.end()){
+        if (matchingRequest != liveRequests.end()) {
             // Update SNMPDevice with community and version
             SNMPDevice updatedDevice = SNMPDevice(device, incomingPacket.snmpVersion, incomingPacket.communityString);
             SNMP_ERROR_RESPONSE ret = SNMP_GENERIC_ERROR;
-            switch(matchingRequest->second){
+            switch (matchingRequest->second) {
                 case GetRequestPDU:
-                case SetRequestPDU:
-                {
+                case SetRequestPDU: {
                     // Match response to request
-                    handleGetResponsePDU(callbacks, incomingPacket.varbindList, incomingPacket.errorStatus, incomingPacket.errorIndex, updatedDevice, responseCallback);
+                    handleGetResponsePDU(callbacks, incomingPacket.varbindList, incomingPacket.errorStatus,
+                                         incomingPacket.errorIndex, updatedDevice, responseCallback);
                     ret = SNMP_RESPONSE_RECEIVED;
                     break;
                 }
                 case InformRequestPDU:
-                    if(informCallback) informCallback(ctx, incomingPacket.requestID, !incomingPacket.errorStatus.errorStatus);
+                    if (informCallback)
+                        informCallback(ctx, incomingPacket.requestID, !incomingPacket.errorStatus.errorStatus);
                     ret = SNMP_INFORM_RESPONSE_OCCURRED;
                     break;
                 default:
-                    SNMP_LOGW("Can't handle the response packet from request type (this should be static assert): %u, %u, %u\n", matchingRequest->first, matchingRequest->second, incomingPacket.requestID);
+                    SNMP_LOGW(
+                            "Can't handle the response packet from request type (this should be static assert): %u, %u, %u\n",
+                            matchingRequest->first, matchingRequest->second, incomingPacket.requestID);
                     ret = SNMP_GENERIC_ERROR;
                     break;
             }
@@ -66,8 +70,9 @@ SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *respons
     }
 
     SNMP_PERMISSION requestPermission = getPermissionOfRequest(incomingPacket, _community, _readOnlyCommunity);
-    if(requestPermission == SNMP_PERM_NONE){
-        SNMP_LOGW("Invalid communitystring provided: %s, no response to give\n", incomingPacket.communityString.c_str());
+    if (requestPermission == SNMP_PERM_NONE) {
+        SNMP_LOGW("Invalid communitystring provided: %s, no response to give\n",
+                  incomingPacket.communityString.c_str());
         return SNMP_REQUEST_INVALID_COMMUNITY;
     }
 
@@ -80,42 +85,46 @@ SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *respons
     SNMP_ERROR_RESPONSE handleStatus = SNMP_NO_ERROR;
     SNMP_ERROR_STATUS globalError = GEN_ERR;
 
-    switch(incomingPacket.packetPDUType){
+    switch (incomingPacket.packetPDUType) {
         case GetRequestPDU:
         case GetNextRequestPDU:
-            pass = handleGetRequestPDU(callbacks, incomingPacket.varbindList, outResponseList, incomingPacket.snmpVersion, incomingPacket.packetPDUType == GetNextRequestPDU);
+            pass = handleGetRequestPDU(callbacks, incomingPacket.varbindList, outResponseList,
+                                       incomingPacket.snmpVersion, incomingPacket.packetPDUType == GetNextRequestPDU);
             handleStatus = incomingPacket.packetPDUType == GetRequestPDU ? SNMP_GET_OCCURRED : SNMP_GETNEXT_OCCURRED;
-        break;
+            break;
         case GetBulkRequestPDU:
-            if(incomingPacket.snmpVersion != SNMP_VERSION_2C){
+            if (incomingPacket.snmpVersion != SNMP_VERSION_2C) {
                 SNMP_LOGD("Received GetBulkRequest in SNMP_VERSION_1");
                 pass = false;
                 globalError = GEN_ERR;
             } else {
-                pass = handleGetBulkRequestPDU(callbacks, incomingPacket.varbindList, outResponseList, incomingPacket.errorStatus.nonRepeaters, incomingPacket.errorIndex.maxRepititions);
+                pass = handleGetBulkRequestPDU(callbacks, incomingPacket.varbindList, outResponseList,
+                                               incomingPacket.errorStatus.nonRepeaters,
+                                               incomingPacket.errorIndex.maxRepititions);
                 handleStatus = SNMP_GETBULK_OCCURRED;
             }
-        break;
+            break;
         case SetRequestPDU:
-            if(requestPermission != SNMP_PERM_READ_WRITE){
+            if (requestPermission != SNMP_PERM_READ_WRITE) {
                 SNMP_LOGD("Attempting to perform a SET without required permissions");
                 pass = false;
                 globalError = NO_ACCESS;
             } else {
-                pass = handleSetRequestPDU(callbacks, incomingPacket.varbindList, outResponseList, incomingPacket.snmpVersion);
+                pass = handleSetRequestPDU(callbacks, incomingPacket.varbindList, outResponseList,
+                                           incomingPacket.snmpVersion);
                 handleStatus = SNMP_SET_OCCURRED;
             }
-        break;
+            break;
         default:
             SNMP_LOGD("Not sure what to do with SNMP PDU of type: %d\n", incomingPacket.packetPDUType);
             handleStatus = SNMP_UNKNOWN_PDU_OCCURRED;
             pass = false;
-        break;
+            break;
     }
 
-    if(pass){
-        for(const auto& item : outResponseList){
-            if(item.errorStatus != NO_ERROR){
+    if (pass) {
+        for (const auto &item : outResponseList) {
+            if (item.errorStatus != NO_ERROR) {
                 response.addErrorResponse(item);
             } else {
                 response.addResponse(item);
@@ -131,7 +140,7 @@ SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *respons
     memset(buffer, 0, max_packet_size);
 
     *responseLength = response.serialiseInto(buffer, max_packet_size);
-    if(*responseLength <= 0){
+    if (*responseLength <= 0) {
         SNMP_LOGD("Failed to build response packet");
         return SNMP_FAILED_SERIALISATION;
     }

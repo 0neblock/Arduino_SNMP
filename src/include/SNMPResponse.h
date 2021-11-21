@@ -1,10 +1,10 @@
 #ifndef SNMPResponse_h
 #define SNMPResponse_h
 
-#include "VarBinds.h"
 #include "SNMPPacket.h"
-#include "defs.h"
 #include "ValueCallbacks.h"
+#include "VarBinds.h"
+#include "defs.h"
 #include <vector>
 
 #if 0
@@ -19,14 +19,15 @@ class ResponseVarBind : public VarBind {
 
 class SNMPResponse : public SNMPPacket {
   public:
-    explicit SNMPResponse(const SNMPPacket& request): SNMPPacket(request){
-      this->setPDUType(GetResponsePDU);
+    explicit SNMPResponse(const SNMPPacket &request) : SNMPPacket(request) {
+        this->setPDUType(GetResponsePDU);
     };
 
-    bool addResponse(const VarBind& response);
-    bool addErrorResponse(const VarBind& response);
+    bool addResponse(const VarBind &response);
 
-    bool setGlobalError(SNMP_ERROR_STATUS error, int index, int overwrite); // Overwrite existing varbindError?
+    bool addErrorResponse(const VarBind &response);
+
+    bool setGlobalError(SNMP_ERROR_STATUS error, int index, int overwrite);// Overwrite existing varbindError?
 };
 
 #endif

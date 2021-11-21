@@ -6,27 +6,31 @@
 #define POLLINGINFO_H
 
 #ifdef COMPILING_TESTS
+
 #include "tests/required/millis.h"
+
 #endif
 
 class ValueCallbackContainer;
 
-typedef bool (*responseCB)(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus, const ValueCallbackContainer& container);
+typedef bool (*responseCB)(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus,
+                           const ValueCallbackContainer &container);
 
 class PollingInfo {
   public:
-    PollingInfo(unsigned long pollingInterval): pollingInterval(pollingInterval){};
-    bool has_timed_out(unsigned long timeout = 5000){
+    PollingInfo(unsigned long pollingInterval) : pollingInterval(pollingInterval){};
+
+    bool has_timed_out(unsigned long timeout = 5000) {
         return this->on_wire && (millis() - this->last_sent > timeout);
     }
 
-    void reset_poller(bool success = false){
+    void reset_poller(bool success = false) {
         this->on_wire = false;
-        if(success)
+        if (success)
             this->last_successful_poll = millis();
     }
 
-    bool should_poll(){
+    bool should_poll() {
         return !this->on_wire && millis() - this->last_successful_poll > this->pollingInterval;
     }
 
@@ -45,7 +49,6 @@ class PollingInfo {
 
     unsigned long last_sent;
     unsigned long last_successful_poll;
-
 };
 
-#endif //POLLINGINFO_H
+#endif//POLLINGINFO_H

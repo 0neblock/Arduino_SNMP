@@ -13,13 +13,15 @@ enum STATUS {
 
 class WiFiClass {
   public:
-    int begin(const char* ssid, const char* password){
-        (void)password;
-        (void)ssid;
+    int begin(const char *ssid, const char *password) {
+        (void) password;
+        (void) ssid;
         return 0;
     };
-    STATUS status(){return (STATUS)0;}
-    IPAddress localIP(){return IPAddress(0,0,0,0);}
+
+    STATUS status() { return (STATUS) 0; }
+
+    IPAddress localIP() { return IPAddress(0, 0, 0, 0); }
 };
 
 WiFiClass WiFi;

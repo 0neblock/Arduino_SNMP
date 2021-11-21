@@ -2,8 +2,11 @@
 #define MISC_h
 
 #ifdef COMPILING_TESTS
-    void delay(int){}
-    int main(){}
+
+void delay(int) {}
+
+int main() {}
+
 #endif
 
 #endif
