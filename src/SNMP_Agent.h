@@ -52,25 +52,25 @@ class SNMPAgent {
     std::string _community = "public";
     std::string _readOnlyCommunity = "";
 
-    ValueCallback *addIntegerHandler(char *oid, int *value, bool isSettable = false, bool overwritePrefix = false);
+    ValueCallback *addIntegerHandler(const char *oid, int *value, bool isSettable = false, bool overwritePrefix = false);
 
-    ValueCallback *addReadWriteStringHandler(char *oid, char **value, size_t max_len = 0, bool isSettable = false,
+    ValueCallback *addReadWriteStringHandler(const char *oid, char **value, size_t max_len = 0, bool isSettable = false,
                                              bool overwritePrefix = false);
 
-    ValueCallback *addReadOnlyStaticStringHandler(char *oid, std::string value, bool overwritePrefix = false);
+    ValueCallback *addReadOnlyStaticStringHandler(const char *oid, std::string value, bool overwritePrefix = false);
 
     ValueCallback *
-    addOpaqueHandler(char *oid, uint8_t *value, size_t data_len, bool isSettable = false, bool overwritePrefix = false);
+    addOpaqueHandler(const char *oid, uint8_t *value, size_t data_len, bool isSettable = false, bool overwritePrefix = false);
 
-    ValueCallback *addTimestampHandler(char *oid, int *value, bool isSettable = false, bool overwritePrefix = false);
+    ValueCallback *addTimestampHandler(const char *oid, int *value, bool isSettable = false, bool overwritePrefix = false);
 
-    ValueCallback *addOIDHandler(char *oid, std::string value, bool overwritePrefix = false);
+    ValueCallback *addOIDHandler(const char *oid, std::string value, bool overwritePrefix = false);
 
-    ValueCallback *addCounter64Handler(char *oid, uint64_t *value, bool overwritePrefix = false);
+    ValueCallback *addCounter64Handler(const char *oid, uint64_t *value, bool overwritePrefix = false);
 
-    ValueCallback *addCounter32Handler(char *oid, uint32_t *value, bool overwritePrefix = false);
+    ValueCallback *addCounter32Handler(const char *oid, uint32_t *value, bool overwritePrefix = false);
 
-    ValueCallback *addGuageHandler(char *oid, uint32_t *value, bool overwritePrefix);
+    ValueCallback *addGuageHandler(const char *oid, uint32_t *value, bool overwritePrefix);
 
     bool setUDP(UDP *udp);
 
@@ -120,7 +120,7 @@ class SNMPAgent {
     std::string oidPrefix;
     uint8_t _packetBuffer[MAX_SNMP_PACKET_LENGTH] = {0};
 
-    SortableOIDType *buildOIDWithPrefix(char *oid, bool overwritePrefix);
+    SortableOIDType *buildOIDWithPrefix(const char *oid, bool overwritePrefix);
 
     static std::list<SNMPAgent *> agents;
     std::list<struct InformItem *> informList;

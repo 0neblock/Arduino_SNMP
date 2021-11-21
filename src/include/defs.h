@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifndef COMPILING_TESTS
+#include <Arduino.h>
+#endif
+
 typedef enum SNMP_ERROR_RESPONSE {
     SNMP_NO_UDP = -10,
     SNMP_REQUEST_TOO_LARGE = -5,

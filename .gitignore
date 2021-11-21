@@ -22,3 +22,4 @@ cmake-build-debug-visual-studio/cmake_install.cmake
 cmake-build-debug-visual-studio/CMakeCache.txt
 cmake-build-debug-visual-studio/Makefile
 cmake-build-debug-visual-studio/Testing/Temporary/LastTest.log
+tests/tests.d

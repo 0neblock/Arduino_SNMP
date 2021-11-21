@@ -18,8 +18,12 @@
 
 void SNMPManager::loop() {
     // Put on a timer
-    teardown_old_requests();
-    prepare_next_polling_request();
+    this->last_processed = millis();
+    if (millis() - this->last_processed > 1000) {
+        teardown_old_requests();
+        prepare_next_polling_request();
+    }
+
     process_incoming_packets();
 }
 
@@ -36,6 +40,8 @@ snmp_request_id_t SNMPManager::prepare_next_polling_request() {
             if (container.pollingInfo->should_poll()) {
                 device = container.agentDevice;
                 callbacks.push_back(&container);
+                // max SNMPREQUEST_VARBIND_COUNT varbinds per packet
+                // TODO: calculate as we go the assumed size of the packet, up to a limit
                 if (++callbackCount == SNMPREQUEST_VARBIND_COUNT) continue;
             }
         }
@@ -101,10 +107,10 @@ void SNMPManager::setUDP(UDP *u) {
     this->udp = u;
 }
 
-ValueCallback *SNMPManager::addIntegerPoller(SNMPDevice *device, char *oid, int *value, unsigned long pollingInterval) {
+ValueCallback *SNMPManager::addIntegerPoller(SNMPDevice *device, const char *oid, int *value, unsigned long pollingInterval) {
     if (!value) return nullptr;
-    SNMP_LOGD("AddIntegerPoller");
-    SortableOIDType *oidType = new SortableOIDType(std::string(oid));
+
+    auto *oidType = new SortableOIDType(std::string(oid));
     ValueCallback *callback = new IntegerCallback(oidType, value);
 
     return this->addCallbackPoller(device, callback, pollingInterval);
@@ -124,7 +130,7 @@ bool SNMPManager::responseCallback(std::shared_ptr<OIDType> responseOID, bool su
     if (container) {
         container.pollingInfo->reset_poller(success);
     } else {
-        SNMP_LOGI("Unsolicited OID response: %s\n", responseOID->string().c_str());
+        SNMP_LOGW("Unsolicited OID response: %s\n", responseOID->string().c_str());
         SNMP_LOGD("Error Status: %d\n", errorStatus);
     }
     return true;

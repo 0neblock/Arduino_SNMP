@@ -20,7 +20,7 @@ class SNMPManager {
 
     SNMPManager(const char *community) : _defaultCommunity(community){};
 
-    ValueCallback *addIntegerPoller(SNMPDevice *device, char *oid, int *value, unsigned long pollingInterval = 30000);
+    ValueCallback *addIntegerPoller(SNMPDevice *device, const char *oid, int *value, unsigned long pollingInterval = 30000);
 
     void removePoller(ValueCallback *callbackPoller, SNMPDevice *device);
 
@@ -53,6 +53,7 @@ class SNMPManager {
 
     static bool responseCallback(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus,
                                  const ValueCallbackContainer &container);
+    unsigned long last_processed;
 };
 
 #endif//SNMP_MANAGER_H
