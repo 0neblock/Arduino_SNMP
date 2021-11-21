@@ -33,7 +33,7 @@ static size_t decode_ber_length_integer(const uint8_t *buf, int *decoded_integer
     }
 }
 
-int BER_CONTAINER::fromBuffer(const uint8_t *buf, size_t max_len) {
+int BER_CONTAINER::fromBuffer(const uint8_t *buf, const size_t max_len) {
     // In the base class we are going to double check our type, and decode the length of this structure, then return bytes read
     if (max_len < 2) return SNMP_BUFFER_ERROR_TLV_TOO_SMALL;// Too small for any type
 
@@ -52,7 +52,7 @@ int BER_CONTAINER::fromBuffer(const uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int NetworkAddress::fromBuffer(const uint8_t *buf, size_t max_len) {
+int NetworkAddress::fromBuffer(const uint8_t *buf, const size_t max_len) {
     int i = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(i);
     const uint8_t *ptr = buf + i;
@@ -67,7 +67,7 @@ int NetworkAddress::fromBuffer(const uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int IntegerType::fromBuffer(const uint8_t *buf, size_t max_len) {
+int IntegerType::fromBuffer(const uint8_t *buf, const size_t max_len) {
     int i = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(i);
     const uint8_t *ptr = buf + i;
@@ -101,7 +101,7 @@ int IntegerType::fromBuffer(const uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int OctetType::fromBuffer(const uint8_t *buf, size_t max_len) {
+int OctetType::fromBuffer(const uint8_t *buf, const size_t max_len) {
     int i = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(i);
     const uint8_t *ptr = buf + i;
@@ -112,7 +112,7 @@ int OctetType::fromBuffer(const uint8_t *buf, size_t max_len) {
     return _length + i;
 }
 
-int OpaqueType::fromBuffer(const uint8_t *buf, size_t max_len) {
+int OpaqueType::fromBuffer(const uint8_t *buf, const size_t max_len) {
     int i = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(i);
     const uint8_t *ptr = buf + i;
@@ -124,7 +124,7 @@ int OpaqueType::fromBuffer(const uint8_t *buf, size_t max_len) {
     return _length + i;
 }
 
-int OIDType::fromBuffer(const uint8_t *buf, size_t max_len) {
+int OIDType::fromBuffer(const uint8_t *buf, const size_t max_len) {
     int j = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(j);
     const uint8_t *dataPtr = buf + j;
@@ -185,12 +185,12 @@ const std::vector<unsigned long> SortableOIDType::generateSortingMap() const {
     return map;
 }
 
-int NullType::fromBuffer(const uint8_t *, size_t) {
+int NullType::fromBuffer(const uint8_t *, const size_t) {
     _length = 0;
     return 2;
 }
 
-int Counter64::fromBuffer(const uint8_t *buf, size_t max_len) {
+int Counter64::fromBuffer(const uint8_t *buf, const size_t max_len) {
     int i = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(i);
     const uint8_t *ptr = buf + i;
@@ -257,7 +257,7 @@ std::shared_ptr<BER_CONTAINER> ComplexType::createObjectForType(ASN_TYPE valueTy
     }
 }
 
-int ComplexType::fromBuffer(const uint8_t *buf, size_t max_len) {
+int ComplexType::fromBuffer(const uint8_t *buf, const size_t max_len) {
     int j = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(j);
     const uint8_t *ptr = buf + j;

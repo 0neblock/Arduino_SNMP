@@ -42,7 +42,7 @@ SNMP_ERROR_RESPONSE SNMPAgent::loop() {
             SNMP_ERROR_RESPONSE response = handlePacket(_packetBuffer, packetLength, &reponseLength,
                                                         MAX_SNMP_PACKET_LENGTH, callbacks, _community,
                                                         _readOnlyCommunity, liveRequests,
-                                                        informCallback, nullptr, (void *) this, this->deviceIdentifier);
+                                                        informCallback, nullptr, (void *) this);
             if (response > 0 && response != SNMP_INFORM_RESPONSE_OCCURRED) {
                 // send it
                 SNMP_LOGD("Built packet, sending back response to: %s, %d\n", udp->remoteIP().toString().c_str(),

@@ -22,8 +22,8 @@
 #ifndef IPAddress_h
 #define IPAddress_h
 
-#include <stdint.h>
 #include <cstdio>
+#include <stdint.h>
 #include <string>
 
 // A class to make it easier to handle and pass around IP addresses
@@ -31,7 +31,7 @@
 class IPAddress {
   private:
     union {
-        uint8_t bytes[4];  // IPv4 address
+        uint8_t bytes[4];// IPv4 address
         uint32_t dword;
     } _address;
 
@@ -87,7 +87,6 @@ class IPAddress {
     IPAddress &operator=(const uint8_t *address);
 
     IPAddress &operator=(uint32_t address);
-
 };
 
 const IPAddress INADDR_NONE(0, 0, 0, 0);

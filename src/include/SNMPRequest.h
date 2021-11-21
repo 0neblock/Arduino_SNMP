@@ -11,9 +11,7 @@
 
 class SNMPRequest : public SNMPPacket {
   public:
-    SNMPRequest(ASN_TYPE type) : SNMPPacket() {
-        this->setPDUType(type);
-    }
+    explicit SNMPRequest(ASN_TYPE type) : SNMPPacket(type) {}
 
     void addValueCallback(ValueCallback *callback) {
         if (this->packetPDUType == GetRequestPDU) {

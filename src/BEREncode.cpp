@@ -1,6 +1,6 @@
 #include "include/BER.h"
 
-static size_t recurse_longform(long integer, uint8_t *buf, int max) {
+static size_t recurse_longform(const long integer, uint8_t *buf, const int max) {
     if (integer < 128) {
         return 0;
     } else {
@@ -10,13 +10,13 @@ static size_t recurse_longform(long integer, uint8_t *buf, int max) {
     }
 }
 
-static size_t encode_ber_longform_integer(uint8_t *buf, long integer, int max_len) {
+static size_t encode_ber_longform_integer(uint8_t *buf, const long integer, const int max_len) {
     int bytes_used = recurse_longform(integer, buf, max_len);
     buf[bytes_used] = integer % 128 & 0xFF;
     return bytes_used + 1;
 }
 
-static size_t encode_ber_length_integer(uint8_t *buf, size_t integer, int) {
+static size_t encode_ber_length_integer(uint8_t *buf, const size_t integer) {
     int bytes_used = 1;
     if (integer < 128) {
         *buf = integer & 0xFF;
@@ -29,12 +29,12 @@ static size_t encode_ber_length_integer(uint8_t *buf, size_t integer, int) {
             *buf++ = (1 | 0x80) & 0xFF;
             bytes_used++;
         }
-        *buf++ = integer % 256;
+        *buf = integer % 256;
     }
     return bytes_used;
 }
 
-static size_t encode_ber_length_integer_count(size_t integer) {
+static size_t encode_ber_length_integer_count(const size_t integer) {
     int bytes_used = 1;
     if (integer >= 128) {
         if (integer > 256) {
@@ -46,21 +46,21 @@ static size_t encode_ber_length_integer_count(size_t integer) {
     return bytes_used;
 }
 
-int BER_CONTAINER::serialise(uint8_t *buf, size_t max_len) {
+int BER_CONTAINER::serialise(uint8_t *buf, const size_t max_len) const {
     if (max_len < 2) return SNMP_BUFFER_ENCODE_ERR_LEN_EXCEEDED;
     *buf = _type;
     return 1;
 }
 
-int BER_CONTAINER::serialise(uint8_t *buf, size_t max_len, size_t known_length) {
+int BER_CONTAINER::serialise(uint8_t *buf, const size_t max_len, const size_t known_length) const {
     int i = BER_CONTAINER::serialise(buf, max_len);
     CHECK_ENCODE_ERR(i);
-    i += encode_ber_length_integer(buf + i, known_length, max_len - i);
+    i += encode_ber_length_integer(buf + i, known_length);
     if (max_len < known_length + i) return SNMP_BUFFER_ENCODE_ERR_LEN_EXCEEDED;
     return i;
 }
 
-int NetworkAddress::serialise(uint8_t *buf, size_t max_len) {
+int NetworkAddress::serialise(uint8_t *buf, const size_t max_len) const {
     int i = BER_CONTAINER::serialise(buf, max_len, 4);
     CHECK_ENCODE_ERR(i);
     uint8_t *ptr = buf + i;
@@ -73,7 +73,7 @@ int NetworkAddress::serialise(uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int IntegerType::serialise(uint8_t *buf, size_t max_len) {
+int IntegerType::serialise(uint8_t *buf, const size_t max_len) const {
     int i = BER_CONTAINER::serialise(buf, max_len, 4);
     CHECK_ENCODE_ERR(i);
     uint8_t *ptr = buf + i;
@@ -86,7 +86,7 @@ int IntegerType::serialise(uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int Counter64::serialise(uint8_t *buf, size_t max_len) {
+int Counter64::serialise(uint8_t *buf, const size_t max_len) const {
     int i = BER_CONTAINER::serialise(buf, max_len, 8);
     CHECK_ENCODE_ERR(i);
     uint8_t *ptr = buf + i;
@@ -103,12 +103,12 @@ int Counter64::serialise(uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int NullType::serialise(uint8_t *buf, size_t max_len) {
+int NullType::serialise(uint8_t *buf, const size_t max_len) const {
     return BER_CONTAINER::serialise(buf, max_len, 0);
 }
 
 
-int OctetType::serialise(uint8_t *buf, size_t max_len) {
+int OctetType::serialise(uint8_t *buf, const size_t max_len) const {
     int i = BER_CONTAINER::serialise(buf, max_len, _value.length());
     CHECK_ENCODE_ERR(i);
     uint8_t *ptr = buf + i;
@@ -119,7 +119,7 @@ int OctetType::serialise(uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int OpaqueType::serialise(uint8_t *buf, size_t max_len) {
+int OpaqueType::serialise(uint8_t *buf, const size_t max_len) const {
     int i = BER_CONTAINER::serialise(buf, max_len, _dataLength);
     CHECK_ENCODE_ERR(i);
     uint8_t *ptr = buf + i;
@@ -130,7 +130,7 @@ int OpaqueType::serialise(uint8_t *buf, size_t max_len) {
     return ptr - buf;
 }
 
-int OIDType::serialise(uint8_t *buf, size_t max_len) {
+int OIDType::serialise(uint8_t *buf, const size_t max_len) const {
     int i = BER_CONTAINER::serialise(buf, max_len, this->data.size());
     CHECK_ENCODE_ERR(i);
     if (!this->valid) return SNMP_BUFFER_ENCODE_ERROR_INVALID_OID;
@@ -183,13 +183,13 @@ bool OIDType::generateInternalData() {
     return true;
 }
 
-static inline void shift_arr_right(uint8_t *ptr, int num_length_bytes, size_t length) {
+static inline void shift_arr_right(uint8_t *ptr, const int num_length_bytes, const size_t length) {
     for (int l = length + num_length_bytes - 1; l - num_length_bytes >= 0; l--) {
         ptr[l] = ptr[l - num_length_bytes];
     }
 }
 
-int ComplexType::serialise(uint8_t *buf, size_t max_len) {
+int ComplexType::serialise(uint8_t *buf, const size_t max_len) const {
     int i = BER_CONTAINER::serialise(buf, max_len);
     CHECK_ENCODE_ERR(i);
 
@@ -218,6 +218,6 @@ int ComplexType::serialise(uint8_t *buf, size_t max_len) {
     }
 
     // then write the length value
-    i += encode_ber_length_integer(len_ptr, internalLength, num_length_bytes);// , max_len_bytes just to be safe
+    i += encode_ber_length_integer(len_ptr, internalLength);// , max_len_bytes just to be safe
     return internalLength + i;
 }

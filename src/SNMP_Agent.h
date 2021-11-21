@@ -34,13 +34,11 @@ class SNMPAgent {
 
     SNMPAgent(const char *community) : _community(community) {
         SNMPAgent::agents.push_back(this);
-        this->deviceIdentifier._community = community;
     };
 
     SNMPAgent(const char *readOnlyCommunity, const char *readWriteCommunity) : _community(readWriteCommunity),
                                                                                _readOnlyCommunity(readOnlyCommunity) {
         SNMPAgent::agents.push_back(this);
-        this->deviceIdentifier._community = readWriteCommunity;
     }
 
     void setReadOnlyCommunity(std::string community) {
@@ -86,7 +84,6 @@ class SNMPAgent {
 
     void setUDPport(short port) {
         agentPort = port;
-        this->deviceIdentifier._port = port;
     }
 
     bool setOccurred = false;
@@ -107,7 +104,7 @@ class SNMPAgent {
 
     // Our snmpDevice is ip-agnostic because we can have multiple udp clients, which might have different IPs, but will have same port
     // Using default address makes sense here because we can use it if we're running a manager at the same time
-    SNMPDevice deviceIdentifier = SNMPDevice(INADDR_NONE, 161, SNMP_VERSION_2C, "public");
+    //    SNMPDevice deviceIdentifier = SNMPDevice(INADDR_NONE, 161, SNMP_VERSION_2C, "public");
 
   private:
     std::deque<ValueCallbackContainer> callbacks;

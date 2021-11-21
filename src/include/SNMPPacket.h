@@ -3,16 +3,9 @@
 
 #include "VarBinds.h"
 #include "defs.h"
-#include <vector>
 #include <math.h>
 #include <string>
-
-struct AwaitingResponse {
-    const snmp_request_id_t requestId;
-    const ASN_TYPE requestType;
-
-    AwaitingResponse(snmp_request_id_t id, ASN_TYPE type) : requestId(id), requestType(type) {}
-};
+#include <vector>
 
 enum SNMPParsingState {
     SNMPVERSION,
@@ -44,9 +37,9 @@ union ErrorIndex {
 
 class SNMPPacket {
   public:
-    SNMPPacket() {};
+    SNMPPacket(){};
 
-    SNMPPacket(ASN_TYPE type) : packetPDUType(type) {};
+    SNMPPacket(ASN_TYPE type) : packetPDUType(type){};
 
     SNMPPacket(const SNMPPacket &packet) {
         this->setRequestID(packet.requestID);
@@ -88,7 +81,7 @@ class SNMPPacket {
     std::shared_ptr<IntegerType> snmpVersionPtr = nullptr;
     std::shared_ptr<OctetType> communityStringPtr = nullptr;
 
-    snmp_request_id_t requestID = 0;
+    snmp_request_id_t requestID = INVALID_SNMP_REQUEST_ID;
     SNMP_VERSION snmpVersion = (SNMP_VERSION) 0;
     std::string communityString;
 

@@ -4,14 +4,14 @@
 #include "catch.hpp"
 
 #include "include/SNMPPacket.h"
-#include "include/ValueCallbacks.h"
 #include "include/SNMPParser.h"
+#include "include/ValueCallbacks.h"
 
 #include "SNMPTrap.h"
 
 #include <list>
 
-std::list<AwaitingResponse> liveRequests;
+std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
 
 static SNMPPacket *GenerateTestSNMPRequestPacket() {
     SNMPPacket *packet = new SNMPPacket();
@@ -271,7 +271,6 @@ TEST_CASE("Test SetRequestPDU", "[snmp]") {
     REQUIRE(opaqueBuf[2] == 3);
     REQUIRE(opaqueBuf[3] == 2);
     REQUIRE(opaqueBuf[4] == 1);
-
 }
 
 
@@ -322,7 +321,7 @@ TEST_CASE("sort/remove handlers ", "[snmp]") {
 
     REQUIRE(callbacks.size() == 9);
 
-    for (auto callback: callbacks) {
+    for (auto callback : callbacks) {
         REQUIRE((callback != cb));
     }
 
@@ -349,7 +348,6 @@ TEST_CASE("sort/remove handlers ", "[snmp]") {
     callbackIt++;
     REQUIRE((*callbackIt)->OID->string() == ".1.3.6.1.4.1200.5100000.1");
     callbackIt++;
-
 }
 
 TEST_CASE("SNMPTraps ", "[snmp]") {
@@ -364,7 +362,7 @@ TEST_CASE("SNMPTraps ", "[snmp]") {
     TimestampCallback *timestampCallbackOID = new TimestampCallback(new SortableOIDType(".1.3.6.1.2.1.1.3.0"),
                                                                     &tensOfMillisCounter);
 
-    settableNumberTrap->setTrapOID(new OIDType(".1.3.6.1.2.1.33.2")); // OID of the trap
+    settableNumberTrap->setTrapOID(new OIDType(".1.3.6.1.2.1.33.2"));// OID of the trap
     settableNumberTrap->setSpecificTrap(1);
 
     // Set the uptime counter to use in the trap
@@ -374,7 +372,7 @@ TEST_CASE("SNMPTraps ", "[snmp]") {
     settableNumberTrap->addOIDPointer(changingNumberOID);
     settableNumberTrap->addOIDPointer(settableNumberOID);
 
-    settableNumberTrap->setIP(IPAddress(192, 168, 0, 1)); // Set our Source IP
+    settableNumberTrap->setIP(IPAddress(192, 168, 0, 1));// Set our Source IP
 
     REQUIRE(settableNumberTrap->buildForSending() == true);
 
@@ -388,9 +386,8 @@ TEST_CASE("SNMPTraps ", "[snmp]") {
     REQUIRE(trapBuffer->fromBuffer(buffer, 150) == SNMP_BUFFER_ERROR_UNKNOWN_TYPE);
 
     // Traps cannot be parsed as regular packets and we'll make sure parsing fails'
-//    SNMPPacket* trapPacket = new SNMPPacket();
-//    REQUIRE( trapPacket->parseFrom(buffer, 150) == SNMP_PARSE_ERROR_AT_STATE(REQUESTID) );
-
+    //    SNMPPacket* trapPacket = new SNMPPacket();
+    //    REQUIRE( trapPacket->parseFrom(buffer, 150) == SNMP_PARSE_ERROR_AT_STATE(REQUESTID) );
 }
 
 TEST_CASE("SNMPInform ", "[snmp]") {
@@ -406,7 +403,7 @@ TEST_CASE("SNMPInform ", "[snmp]") {
     TimestampCallback *timestampCallbackOID = new TimestampCallback(new SortableOIDType(".1.3.6.1.2.1.1.3.0"),
                                                                     &tensOfMillisCounter);
 
-    settableNumberTrap->setTrapOID(new OIDType(".1.3.6.1.2.1.33.2")); // OID of the trap
+    settableNumberTrap->setTrapOID(new OIDType(".1.3.6.1.2.1.33.2"));// OID of the trap
 
     // Set the uptime counter to use in the trap
     settableNumberTrap->setUptimeCallback(timestampCallbackOID);
@@ -415,7 +412,7 @@ TEST_CASE("SNMPInform ", "[snmp]") {
     settableNumberTrap->addOIDPointer(changingNumberOID);
     settableNumberTrap->addOIDPointer(settableNumberOID);
 
-    settableNumberTrap->setIP(IPAddress(192, 168, 0, 1)); // Set our Source IP
+    settableNumberTrap->setIP(IPAddress(192, 168, 0, 1));// Set our Source IP
 
     REQUIRE(settableNumberTrap->buildForSending() == true);
 
@@ -427,7 +424,6 @@ TEST_CASE("SNMPInform ", "[snmp]") {
     REQUIRE(trapPacket->parseFrom(buffer, 150) == SNMP_ERROR_OK);
 
     REQUIRE(trapPacket->packetPDUType == InformRequestPDU);
-
 }
 
 TEST_CASE("Test OID Validation ", "[snmp]") {

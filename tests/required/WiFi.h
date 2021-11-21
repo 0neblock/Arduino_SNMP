@@ -1,8 +1,8 @@
 #ifndef WiFi_h
 #define WiFi_h
 
-#include "Serial.h"
 #include "IPAddress.h"
+#include "Serial.h"
 #include "misc.h"
 
 #ifdef COMPILING_TESTS

@@ -33,11 +33,7 @@ class SNMPManager {
   private:
     std::string _defaultCommunity = "public";
 
-    ValueCallback *addCallbackPoller(SNMPDevice *device, ValueCallback *callback, unsigned long pollingInterval) {
-        auto pollingInfo = std::make_shared<PollingInfo>(pollingInterval);
-        this->pollingCallbacks.emplace_back(device, callback, pollingInfo);
-        return callback;
-    }
+    ValueCallback *addCallbackPoller(SNMPDevice *device, ValueCallback *callback, unsigned long pollingInterval);
 
     std::deque<ValueCallbackContainer> pollingCallbacks;
     std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;

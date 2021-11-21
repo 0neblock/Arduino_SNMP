@@ -11,6 +11,9 @@
 
 #endif
 
+#include "include/BER.h"
+#include <memory>
+
 class ValueCallbackContainer;
 
 typedef bool (*responseCB)(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus,
@@ -20,7 +23,7 @@ class PollingInfo {
   public:
     PollingInfo(unsigned long pollingInterval) : pollingInterval(pollingInterval){};
 
-    bool has_timed_out(unsigned long timeout = 5000) {
+    bool has_timed_out(unsigned long timeout = 5000) const {
         return this->on_wire && (millis() - this->last_sent > timeout);
     }
 
@@ -30,7 +33,7 @@ class PollingInfo {
             this->last_successful_poll = millis();
     }
 
-    bool should_poll() {
+    bool should_poll() const {
         return !this->on_wire && millis() - this->last_successful_poll > this->pollingInterval;
     }
 

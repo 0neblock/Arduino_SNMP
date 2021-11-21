@@ -1,12 +1,10 @@
 #ifndef SNMP_PARSER_h
 #define SNMP_PARSER_h
 
-#include "include/defs.h"
-
-//#includ# "include/SNMPPacket.h"
-#include "include/PollingInfo.h"
+#include "include/BER.h"
 #include "include/SNMPResponse.h"
 #include "include/ValueCallbacks.h"
+#include "include/defs.h"
 
 #include <deque>
 #include <list>
@@ -22,7 +20,7 @@ bool handleSetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deq
 
 bool handleGetBulkRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind> &varbindList,
                              std::deque<VarBind> &outResponseList, unsigned int nonRepeaters,
-                             unsigned int maxRepititions);
+                             unsigned int maxRepetitions);
 
 bool handleGetResponsePDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind> &varbindList,
                           ErrorStatus errorStatus, ErrorIndex errorIndex, const SNMPDevice &device = NO_DEVICE,

@@ -20,9 +20,6 @@ class ValueCallbackContainer {
     explicit ValueCallbackContainer(SNMPDevice *ip, ValueCallback *callback, std::shared_ptr<PollingInfo> pollingInfo)
         : agentDevice(ip), pollingInfo(std::move(pollingInfo)), valueCallback(callback){};
 
-    ValueCallbackContainer(const ValueCallbackContainer &other) : agentDevice(other.agentDevice),
-                                                                  pollingInfo(other.pollingInfo),
-                                                                  valueCallback(other.valueCallback){};
 
     ValueCallback *operator->() const {
         return this->valueCallback;
@@ -40,18 +37,14 @@ class ValueCallbackContainer {
         return this->valueCallback != nullptr;
     }
 
-    ValueCallbackContainer &operator=(ValueCallbackContainer &&) {
-        return *this;
-    };
-
     // Only used in manager contexts
-    const SNMPDevice *const agentDevice = nullptr;
-    const std::shared_ptr<PollingInfo> pollingInfo = nullptr;
+    const SNMPDevice *agentDevice = nullptr;
+    std::shared_ptr<PollingInfo> pollingInfo = nullptr;
 
   private:
     friend class ValueCallback;
 
-    ValueCallback *const valueCallback = nullptr;
+    ValueCallback *valueCallback = nullptr;
 };
 
 const ValueCallbackContainer NO_CALLBACK(nullptr);
@@ -66,12 +59,12 @@ class ValueCallback {
 
     SortableOIDType *const OID;
 
-    ASN_TYPE type;
+    const ASN_TYPE type;
 
     bool isSettable = false;
-    bool setOccurred = false;
+    bool mutable setOccurred = false;
 
-    void resetSetOccurred() {
+    void resetSetOccurred() const {
         setOccurred = false;
     }
 
@@ -85,10 +78,10 @@ class ValueCallback {
     setValueForCallback(const ValueCallbackContainer &callback, const std::shared_ptr<BER_CONTAINER> &value,
                         bool isAgentContext);
 
-    virtual std::shared_ptr<BER_CONTAINER> buildTypeWithValue() = 0;
+    virtual std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const = 0;
 
   protected:
-    virtual SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) = 0;
+    virtual SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const = 0;
 };
 
 void sort_handlers(std::deque<ValueCallbackContainer> &);
@@ -103,64 +96,64 @@ class IntegerCallback : public ValueCallback {
     int *const value;
     int modifier = 0;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const override;
 };
 
 class TimestampCallback : public ValueCallback {
   public:
     TimestampCallback(SortableOIDType *oid, int *value) : ValueCallback(oid, TIMESTAMP), value(value){};
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
   protected:
     int *const value;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const override;
 };
 
 class ReadOnlyStringCallback : public ValueCallback {
   public:
-    ReadOnlyStringCallback(SortableOIDType *oid, std::string value) : ValueCallback(oid, STRING),
-                                                                      value(std::move(value)){};
+    ReadOnlyStringCallback(SortableOIDType *oid, const std::string &value) : ValueCallback(oid, STRING),
+                                                                             value(std::move(value)){};
 
   protected:
-    std::string value;
+    const std::string value;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *) override {
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *) const override {
         return NO_ACCESS;
     };
 };
 
 class StringCallback : public ValueCallback {
   public:
-    StringCallback(SortableOIDType *oid, char **value, int max_len) : ValueCallback(oid, STRING), value(value),
-                                                                      max_len(max_len){};
+    StringCallback(SortableOIDType *oid, char **value, const int max_len) : ValueCallback(oid, STRING), value(value),
+                                                                            max_len(max_len){};
 
   protected:
     char **const value;
-    size_t const max_len;
+    const size_t max_len;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const override;
 };
 
 class OpaqueCallback : public ValueCallback {
   public:
-    OpaqueCallback(SortableOIDType *oid, uint8_t *value, int data_len) : ValueCallback(oid, OPAQUE), value(value),
-                                                                         data_len(data_len){};
+    OpaqueCallback(SortableOIDType *oid, uint8_t *value, const int data_len) : ValueCallback(oid, OPAQUE), value(value),
+                                                                               data_len(data_len){};
 
   protected:
     uint8_t *const value;
-    int const data_len;
+    const int data_len;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const override;
 };
 
 class OIDCallback : public ValueCallback {
@@ -170,9 +163,9 @@ class OIDCallback : public ValueCallback {
   protected:
     std::string const value;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *) override {
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *) const override {
         return NO_ACCESS;
     };
 };
@@ -184,9 +177,9 @@ class Counter32Callback : public ValueCallback {
   protected:
     uint32_t *const value;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const override;
 };
 
 class Guage32Callback : public ValueCallback {
@@ -196,9 +189,9 @@ class Guage32Callback : public ValueCallback {
   protected:
     uint32_t *const value;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const override;
 };
 
 class Counter64Callback : public ValueCallback {
@@ -208,9 +201,9 @@ class Counter64Callback : public ValueCallback {
   protected:
     uint64_t *const value;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;
 
-    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER *value) const override;
 };
 
 #endif

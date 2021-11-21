@@ -1,22 +1,22 @@
 #define DEBUG 1
 
 #include "include/SNMPPacket.h"
-#include "include/ValueCallbacks.h"
 #include "include/SNMPParser.h"
 #include "include/SNMPRequest.h"
+#include "include/ValueCallbacks.h"
 
-// Server side implementation of UDP client-server model 
+// Server side implementation of UDP client-server model
+#include <arpa/inet.h>
+#include <deque>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <deque>
+#include <sys/types.h>
+#include <unistd.h>
 
-#define PORT     161
+#define PORT 161
 #define MAXLINE 1024
 
 std::deque<ValueCallbackContainer> callbacks;
@@ -38,7 +38,7 @@ void runagent() {
     memset(&cliaddr, 0, sizeof(cliaddr));
 
     // Filling server information
-    servaddr.sin_family = AF_INET; // IPv4
+    servaddr.sin_family = AF_INET;// IPv4
     servaddr.sin_addr.s_addr = INADDR_ANY;
     servaddr.sin_port = htons(PORT);
 
@@ -51,7 +51,7 @@ void runagent() {
 
     int len, n;
 
-    len = sizeof(cliaddr);  //len is value/resuslt
+    len = sizeof(cliaddr);//len is value/resuslt
 
     // IntegerCallback* intCallback = new IntegerCallback(new OIDType(".1.3.6.1.4.1.5.0"));
     // intCallback->value = &testingInt;
@@ -98,7 +98,6 @@ void runagent() {
                    0, (const struct sockaddr *) &cliaddr,
                    len);
         }
-
     }
 }
 
@@ -117,7 +116,7 @@ void runmanager() {
     }
 
     // Filling server information
-    senderaddr.sin_family = AF_INET; // IPv4
+    senderaddr.sin_family = AF_INET;// IPv4
     senderaddr.sin_port = htons(10062);
     memcpy(&senderaddr.sin_addr.s_addr, address, 4);
 
@@ -129,7 +128,7 @@ void runmanager() {
     }
 
     // Filling client information
-    cliaddr.sin_family = AF_INET; // IPv4
+    cliaddr.sin_family = AF_INET;// IPv4
     cliaddr.sin_port = htons(161);
     cliaddr.sin_addr.s_addr = INADDR_ANY;
 
@@ -141,7 +140,7 @@ void runmanager() {
 
     int len, n;
 
-    len = sizeof(cliaddr);  //len is value/resuslt
+    len = sizeof(cliaddr);//len is value/resuslt
 
     // sockfd is our listening manager for responses, and our sending channel
     auto packet = SNMPRequest(GetRequestPDU);
@@ -183,16 +182,15 @@ void runmanager() {
 
         printf("SNMP Packet : %d, len:%d, id: %u\n", response, responseLength, packet.requestID);
         printf("int value: %d\n", testValue);
-//        if(response > 0){
-//            sendto(sockfd, (const char *)buffer, responseLength,
-//                   0, (const struct sockaddr *) &cliaddr,
-//                   len);
-//        }
-
+        //        if(response > 0){
+        //            sendto(sockfd, (const char *)buffer, responseLength,
+        //                   0, (const struct sockaddr *) &cliaddr,
+        //                   len);
+        //        }
     }
 }
 
-// Driver code 
+// Driver code
 int main(int argc, char **argv) {
     if (strcmp("agent", argv[argc - 1]) == 0) {
         runagent();
@@ -201,4 +199,4 @@ int main(int argc, char **argv) {
     }
 
     return 0;
-} 
+}

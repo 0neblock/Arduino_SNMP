@@ -81,7 +81,7 @@ ValueCallback::setValueForCallback(const ValueCallbackContainer &callback, const
     return valid;
 }
 
-std::shared_ptr<BER_CONTAINER> IntegerCallback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> IntegerCallback::buildTypeWithValue() const {
     ASSERT_VALID_VALUE(this->value);
 
     auto val = std::make_shared<IntegerType>(*this->value);
@@ -92,7 +92,7 @@ std::shared_ptr<BER_CONTAINER> IntegerCallback::buildTypeWithValue() {
     return val;
 }
 
-SNMP_ERROR_STATUS IntegerCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
+SNMP_ERROR_STATUS IntegerCallback::setTypeWithValue(BER_CONTAINER *rawValue) const {
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
@@ -106,13 +106,13 @@ SNMP_ERROR_STATUS IntegerCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
     return NO_ERROR;
 }
 
-std::shared_ptr<BER_CONTAINER> TimestampCallback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> TimestampCallback::buildTypeWithValue() const {
     ASSERT_VALID_VALUE(this->value);
 
     return std::make_shared<TimestampType>(*this->value);
 }
 
-SNMP_ERROR_STATUS TimestampCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
+SNMP_ERROR_STATUS TimestampCallback::setTypeWithValue(BER_CONTAINER *rawValue) const {
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
@@ -122,13 +122,13 @@ SNMP_ERROR_STATUS TimestampCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
     return NO_ERROR;
 }
 
-std::shared_ptr<BER_CONTAINER> StringCallback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> StringCallback::buildTypeWithValue() const {
     ASSERT_VALID_VALUE(this->value);
 
     return std::make_shared<OctetType>(*this->value);
 }
 
-SNMP_ERROR_STATUS StringCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
+SNMP_ERROR_STATUS StringCallback::setTypeWithValue(BER_CONTAINER *rawValue) const {
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
@@ -139,17 +139,17 @@ SNMP_ERROR_STATUS StringCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
     return NO_ERROR;
 }
 
-std::shared_ptr<BER_CONTAINER> ReadOnlyStringCallback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> ReadOnlyStringCallback::buildTypeWithValue() const {
     return std::make_shared<OctetType>(this->value);
 }
 
-std::shared_ptr<BER_CONTAINER> OpaqueCallback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> OpaqueCallback::buildTypeWithValue() const {
     ASSERT_VALID_VALUE(this->value);
 
     return std::make_shared<OpaqueType>(this->value, this->data_len);
 }
 
-SNMP_ERROR_STATUS OpaqueCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
+SNMP_ERROR_STATUS OpaqueCallback::setTypeWithValue(BER_CONTAINER *rawValue) const {
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
@@ -161,19 +161,19 @@ SNMP_ERROR_STATUS OpaqueCallback::setTypeWithValue(BER_CONTAINER *rawValue) {
     return NO_ERROR;
 }
 
-std::shared_ptr<BER_CONTAINER> OIDCallback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> OIDCallback::buildTypeWithValue() const {
     auto oid = std::make_shared<OIDType>(this->value);
     if (!oid->valid) return nullptr;
     return oid;
 }
 
-std::shared_ptr<BER_CONTAINER> Counter32Callback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> Counter32Callback::buildTypeWithValue() const {
     ASSERT_VALID_VALUE(this->value);
 
     return std::make_shared<Counter32>(*this->value);
 }
 
-SNMP_ERROR_STATUS Counter32Callback::setTypeWithValue(BER_CONTAINER *rawValue) {
+SNMP_ERROR_STATUS Counter32Callback::setTypeWithValue(BER_CONTAINER *rawValue) const {
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
@@ -182,13 +182,13 @@ SNMP_ERROR_STATUS Counter32Callback::setTypeWithValue(BER_CONTAINER *rawValue) {
     return NO_ERROR;
 }
 
-std::shared_ptr<BER_CONTAINER> Guage32Callback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> Guage32Callback::buildTypeWithValue() const {
     ASSERT_VALID_VALUE(this->value);
 
     return std::make_shared<Guage>(*this->value);
 }
 
-SNMP_ERROR_STATUS Guage32Callback::setTypeWithValue(BER_CONTAINER *rawValue) {
+SNMP_ERROR_STATUS Guage32Callback::setTypeWithValue(BER_CONTAINER *rawValue) const {
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
@@ -198,13 +198,13 @@ SNMP_ERROR_STATUS Guage32Callback::setTypeWithValue(BER_CONTAINER *rawValue) {
     return NO_ERROR;
 }
 
-std::shared_ptr<BER_CONTAINER> Counter64Callback::buildTypeWithValue() {
+std::shared_ptr<BER_CONTAINER> Counter64Callback::buildTypeWithValue() const {
     ASSERT_VALID_VALUE(this->value);
 
     return std::make_shared<Counter64>(*this->value);
 }
 
-SNMP_ERROR_STATUS Counter64Callback::setTypeWithValue(BER_CONTAINER *rawValue) {
+SNMP_ERROR_STATUS Counter64Callback::setTypeWithValue(BER_CONTAINER *rawValue) const {
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 

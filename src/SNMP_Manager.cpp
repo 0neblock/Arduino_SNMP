@@ -9,6 +9,7 @@
 #endif
 
 #include "SNMP_Manager.h"
+#include "include/PollingInfo.h"
 #include "include/SNMPParser.h"
 #include "include/SNMPRequest.h"
 
@@ -161,4 +162,10 @@ SNMP_ERROR_RESPONSE SNMPManager::process_incoming_packets() {
         return ret;
     }
     return SNMP_NO_PACKET;
+}
+
+ValueCallback *SNMPManager::addCallbackPoller(SNMPDevice *device, ValueCallback *callback, unsigned long pollingInterval) {
+    auto pollingInfo = std::make_shared<PollingInfo>(pollingInterval);
+    this->pollingCallbacks.emplace_back(device, callback, pollingInfo);
+    return callback;
 }

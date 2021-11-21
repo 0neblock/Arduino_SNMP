@@ -6,7 +6,6 @@
 #include "UDP.h"
 
 class WiFiUDP : public UDP {
-
 };
 
 #endif

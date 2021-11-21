@@ -95,17 +95,17 @@ class BER_CONTAINER {
 
     virtual ~BER_CONTAINER(){};
 
-    ASN_TYPE _type;
+    const ASN_TYPE _type;
     int _length = 0;
 
   protected:
     // Serialise object in BER notation into buf, with a maximum size of max_len; returns number of bytes used
-    virtual int serialise(uint8_t *buf, size_t max_len);
+    virtual int serialise(uint8_t *buf, const size_t max_len) const;
 
-    virtual int serialise(uint8_t *buf, size_t max_len, size_t known_length);
+    virtual int serialise(uint8_t *buf, const size_t max_len, const size_t known_length) const;
 
     // returns number of bytes used from buf, limited by max_len, return -1 if failed to parse
-    virtual int fromBuffer(const uint8_t *buf, size_t max_len);
+    virtual int fromBuffer(const uint8_t *buf, const size_t max_len);
 
     friend class ComplexType;
 };
@@ -121,15 +121,20 @@ class NetworkAddress : public BER_CONTAINER {
     IPAddress _value = INADDR_NONE;
 
   protected:
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 };
 
 
 class IntegerType : public BER_CONTAINER {
   public:
     IntegerType() : BER_CONTAINER(INTEGER){};
+    IntegerType(ASN_TYPE type) : BER_CONTAINER(type){};
+
+    explicit IntegerType(ASN_TYPE type, int value) : IntegerType(type) {
+        _value = value;
+    };
 
     explicit IntegerType(int value) : IntegerType() {
         _value = value;
@@ -138,20 +143,16 @@ class IntegerType : public BER_CONTAINER {
     int _value = 0;
 
   protected:
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 };
 
 class TimestampType : public IntegerType {
   public:
-    TimestampType() : IntegerType() {
-        _type = TIMESTAMP;
-    };
+    TimestampType() : IntegerType(TIMESTAMP){};
 
-    explicit TimestampType(unsigned long value) : IntegerType(value) {
-        _type = TIMESTAMP;
-    };
+    explicit TimestampType(unsigned long value) : IntegerType(TIMESTAMP, value){};
 };
 
 class OctetType : public BER_CONTAINER {
@@ -161,9 +162,9 @@ class OctetType : public BER_CONTAINER {
     std::string _value;
 
   protected:
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 
     OctetType() : BER_CONTAINER(STRING){};
 
@@ -186,9 +187,9 @@ class OpaqueType : public BER_CONTAINER {
     int _dataLength = 0;
 
   protected:
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 
     OpaqueType() : BER_CONTAINER(OPAQUE){};
 
@@ -223,7 +224,7 @@ class OIDType : public BER_CONTAINER {
         return this->data == oid->data;
     }
 
-    bool isSubTreeOf(const OIDType *const oid) {
+    bool isSubTreeOf(const OIDType *const oid) const {
         // If the oid being searched for is smaller than us and is wholly contained in us, true
         // compare from the back so it's quicker
         return oid->data.size() < this->data.size() &&
@@ -232,9 +233,9 @@ class OIDType : public BER_CONTAINER {
     }
 
   protected:
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 
     friend class ComplexType;// So ComplexType gets the empty constructor
     OIDType() : BER_CONTAINER(OID){};
@@ -271,19 +272,17 @@ class SortableOIDType : public OIDType {
 class NullType : public BER_CONTAINER {
   public:
     NullType() : BER_CONTAINER(NULLTYPE){};
+    NullType(ASN_TYPE type) : BER_CONTAINER(type){};
 
   protected:
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 };
 
 class ImplicitNullType : public NullType {
   public:
-    explicit ImplicitNullType(ASN_TYPE type) : NullType() {
-        //TODO: check that we're one of the implicit null types
-        _type = type;
-    };
+    explicit ImplicitNullType(ASN_TYPE type) : NullType(type){};
 };
 
 class Counter64 : public BER_CONTAINER {
@@ -297,31 +296,23 @@ class Counter64 : public BER_CONTAINER {
     uint64_t _value = 0;
 
   protected:
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 };
 
 class Counter32 : public IntegerType {
   public:
-    Counter32() : IntegerType() {
-        _type = COUNTER32;
-    };
+    Counter32() : IntegerType(COUNTER32){};
 
-    explicit Counter32(unsigned int value) : IntegerType(value) {
-        _type = COUNTER32;
-    };
+    explicit Counter32(unsigned int value) : IntegerType(COUNTER32, value){};
 };
 
 class Guage : public IntegerType {// Unsigned int
   public:
-    Guage() : IntegerType() {
-        _type = GUAGE32;
-    };
+    Guage() : IntegerType(GUAGE32){};
 
-    explicit Guage(unsigned int value) : IntegerType(value) {
-        _type = GUAGE32;
-    };
+    explicit Guage(unsigned int value) : IntegerType(GUAGE32, value){};
 };
 
 
@@ -331,9 +322,9 @@ class ComplexType : public BER_CONTAINER {
 
     std::vector<std::shared_ptr<BER_CONTAINER>> values;
 
-    int fromBuffer(const uint8_t *buf, size_t max_len) override;
+    int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 
-    int serialise(uint8_t *buf, size_t max_len) override;
+    int serialise(uint8_t *buf, const size_t max_len) const override;
 
     std::shared_ptr<BER_CONTAINER> addValueToList(const std::shared_ptr<BER_CONTAINER> &newObj) {
         this->values.push_back(newObj);
