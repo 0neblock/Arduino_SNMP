@@ -3,18 +3,25 @@
 
 #include "include/defs.h"
 
-#include "include/SNMPPacket.h"
+//#includ# "include/SNMPPacket.h"
 #include "include/SNMPResponse.h"
 #include "include/ValueCallbacks.h"
+#include "include/PollingInfo.h"
 
 #include <deque>
+#include <list>
 
-typedef void (*informCB)(void* ctx, snmp_request_id_t, bool);
+typedef bool (*informCB)(void* ctx, snmp_request_id_t, bool);
 
-bool handleGetRequestPDU(std::deque<ValueCallback*> &callbacks, std::deque<VarBind>& varbindList, std::deque<VarBind>& outResponseList, SNMP_VERSION version, bool isGetNextRequest);
-bool handleSetRequestPDU(std::deque<ValueCallback*> &callbacks, std::deque<VarBind>& varbindList, std::deque<VarBind>& outResponseList, SNMP_VERSION version);
-bool handleGetBulkRequestPDU(std::deque<ValueCallback*> &callbacks, std::deque<VarBind>& varbindList, std::deque<VarBind>& outResponseList, unsigned int nonRepeaters, unsigned int maxRepititions);
+bool handleGetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind>& varbindList, std::deque<VarBind>& outResponseList, SNMP_VERSION version, bool isGetNextRequest);
+bool handleSetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind>& varbindList, std::deque<VarBind>& outResponseList, SNMP_VERSION version);
+bool handleGetBulkRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind>& varbindList, std::deque<VarBind>& outResponseList, unsigned int nonRepeaters, unsigned int maxRepititions);
+bool handleGetResponsePDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind> &varbindList, ErrorStatus errorStatus, ErrorIndex errorIndex, const SNMPDevice &device = NO_DEVICE, responseCB responseCallback = nullptr);
 
-SNMP_ERROR_RESPONSE handlePacket(uint8_t* buffer, int packetLength, int* responseLength, int max_packet_size, std::deque<ValueCallback*> &callbacks, const std::string &_community, const std::string &_readOnlyCommunity, informCB = nullptr, void* ctx = nullptr);
+SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *responseLength, int max_packet_size,
+                                 std::deque<ValueCallbackContainer> &callbacks, const std::string &_community,
+                                 const std::string &_readOnlyCommunity,
+                                 std::list<AwaitingResponse> &liveRequests, informCB informCallback = nullptr,
+                                 responseCB responseCallback = nullptr, void *ctx = nullptr, const SNMPDevice& device = NO_DEVICE);
 
 #endif

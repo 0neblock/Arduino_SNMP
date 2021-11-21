@@ -84,7 +84,9 @@ typedef int SNMP_BUFFER_ENCODE_ERROR;
 
 // primitive types inherits straight off the container, complex come off complexType
 // all primitives have to serialiseInto themselves (type, length, data), to be put straight into the packet.
-// for deserialising, from the parent container we check the type, then create anobject of that type and calls deSerialise, passing in the data, which pulls it out and saves, and if complex, first split up it schildren into seperate BERs, then creates and passes them creates a child with it's data using the same process.
+// for deserialising, from the parent container we check the type, then create anobject of that type and calls deSerialise, 
+// passing in the data, which pulls it out and saves, and if complex, first split up it schildren into seperate BERs, 
+// then creates and passes them creates a child with it's data using the same process.
 
 
 class BER_CONTAINER {
@@ -181,6 +183,9 @@ protected:
     friend class ComplexType; // So ComplexType can use the empty constructor
 };
 
+class OIDTestHelper {
+
+};
 
 class OIDType: public BER_CONTAINER {
   public:

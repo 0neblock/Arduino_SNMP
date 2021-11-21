@@ -2,8 +2,47 @@
 #define VALUE_CALLBACKS_h
 
 #include "BER.h"
+#include "SNMPDevice.h"
 #include <deque>
 #include <algorithm>
+#include <utility>
+#include "PollingInfo.h"
+
+class ValueCallback;
+
+class ValueCallbackContainer {
+  public:
+    explicit ValueCallbackContainer(ValueCallback* callback): valueCallback(callback){};
+    explicit ValueCallbackContainer(SNMPDevice* ip, ValueCallback* callback): agentDevice(ip), valueCallback(callback) {};
+    explicit ValueCallbackContainer(SNMPDevice* ip, ValueCallback* callback, std::shared_ptr<PollingInfo> pollingInfo): agentDevice(ip), pollingInfo(pollingInfo), valueCallback(callback){};
+
+    ValueCallback* operator -> () const {
+        return this->valueCallback;
+    }
+
+    bool operator != (ValueCallback* other) const {
+        return this->valueCallback != other;
+    }
+
+    bool operator == (ValueCallback* other) const {
+        return !(operator!=(other));
+    }
+
+    explicit operator bool() const {
+        return this->valueCallback != nullptr;
+    }
+
+    // Only used in manager contexts
+    SNMPDevice* agentDevice = nullptr;
+    std::shared_ptr<PollingInfo> pollingInfo = nullptr;
+
+  private:
+    friend class ValueCallback;
+
+    // empty constructor is needed for nullptr
+    ValueCallbackContainer()= default;
+    ValueCallback* valueCallback = nullptr;
+};
 
 class ValueCallback {
   public:
@@ -22,18 +61,18 @@ class ValueCallback {
         setOccurred = false;
     }
 
-    static ValueCallback* findCallback(std::deque<ValueCallback*> &callbacks, const OIDType* const oid, bool walk, size_t startAt = 0, size_t *foundAt = nullptr);
-    static std::shared_ptr<BER_CONTAINER> getValueForCallback(ValueCallback* callback);
-    static SNMP_ERROR_STATUS setValueForCallback(ValueCallback* callback, const std::shared_ptr<BER_CONTAINER> &value);
+    static ValueCallbackContainer findCallback(std::deque<ValueCallbackContainer> &callbacks, const OIDType* const oid, bool walk, size_t startAt = 0, size_t *foundAt = nullptr, const SNMPDevice &device = NO_DEVICE);
+    static std::shared_ptr<BER_CONTAINER> getValueForCallback(const ValueCallbackContainer& callback);
+    static SNMP_ERROR_STATUS setValueForCallback(const ValueCallbackContainer& callback, const std::shared_ptr<BER_CONTAINER> &value,
+                                                 bool isAgentContext);
 
-protected:
     virtual std::shared_ptr<BER_CONTAINER> buildTypeWithValue() = 0;
+protected:
     virtual SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER* value) = 0;
 };
 
-bool compare_callbacks (const ValueCallback* first, const ValueCallback* second);
-void sort_handlers(std::deque<ValueCallback*>&);
-bool remove_handler(std::deque<ValueCallback*>&, ValueCallback*);
+void sort_handlers(std::deque<ValueCallbackContainer>&);
+bool remove_handler(std::deque<ValueCallbackContainer>&, ValueCallback*);
 
 class IntegerCallback: public ValueCallback {
   public:
@@ -51,16 +90,17 @@ class TimestampCallback: public ValueCallback {
   public:
     TimestampCallback(SortableOIDType* oid, int* value): ValueCallback(oid, TIMESTAMP), value(value) {};
 
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+
   protected:
     int* const value;
 
-    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
     SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER* value) override;
 };
 
 class ReadOnlyStringCallback: public ValueCallback {
 public:
-    ReadOnlyStringCallback(SortableOIDType* oid, std::string value): ValueCallback(oid, STRING), value(value) {};
+    ReadOnlyStringCallback(SortableOIDType* oid, std::string value): ValueCallback(oid, STRING), value(std::move(value)) {};
 
 protected:
     std::string value;

@@ -34,7 +34,7 @@ class SNMPTrap : public SNMPPacket {
     short genericTrap = 6;
     short specificTrap = 1;
     
-    short _TrapUDPport = 162;
+    short trapUdpPort = 162;
     
     bool inform = false;
 
@@ -64,12 +64,12 @@ class SNMPTrap : public SNMPPacket {
         specificTrap = num;
     }
 
-    void setIP(IPAddress ip){ // sets our IP
+    void setIP(const IPAddress& ip){ // sets our IP
         agentIP = ip;
     }
     
     void setUDPport(short port){
-	_TrapUDPport = port;
+        trapUdpPort = port;
     }
     
     void setUDP(UDP* udp){
@@ -124,7 +124,7 @@ class SNMPTrap : public SNMPPacket {
 
         if(length <= 0) return false;
 
-        _udp->beginPacket(ip, _TrapUDPport);
+        _udp->beginPacket(ip, trapUdpPort);
         _udp->write(_packetBuffer, length);
         return _udp->endPacket();
     }
@@ -136,6 +136,8 @@ class SNMPTrap : public SNMPPacket {
 
     OIDType* timestampOID = new OIDType(".1.3.6.1.2.1.1.3.0");
     OIDType* snmpTrapOID  = new OIDType(".1.3.6.1.2.1.1.2.0");
+
+    friend class ValueCallback;
 
     bool build() override;
 };

@@ -1,4 +1,5 @@
 #define CATCH_CONFIG_MAIN
+#define protected public
 #include "catch.hpp"
 
 #include "include/SNMPPacket.h"
@@ -8,6 +9,8 @@
 #include "SNMPTrap.h"
 
 #include <list>
+
+std::list<AwaitingResponse> liveRequests;
 
 static SNMPPacket* GenerateTestSNMPRequestPacket(){
     SNMPPacket* packet = new SNMPPacket();
@@ -77,22 +80,22 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
 
 TEST_CASE( "Test Encoding/Decoding packet", "[snmp]" ) {
     // Build Packet
-    SNMPPacket *packet = GenerateTestSNMPRequestPacket();
+    SNMPPacket *staticPacket = GenerateTestSNMPRequestPacket();
     uint8_t buffer[500];
     int serialised_length = 0;
 
     SECTION( "Serialisation" ){
-        serialised_length = packet->serialiseInto(buffer, 500);
+        serialised_length = staticPacket->serialiseInto(buffer, 500);
         REQUIRE( serialised_length == 133 );
     }
     // Read packet
-    SNMPPacket* readPacket = new SNMPPacket();
-    REQUIRE( readPacket->parseFrom(buffer, serialised_length) == SNMP_ERROR_OK);
+    SNMPPacket* packet = new SNMPPacket();
+    REQUIRE( packet->parseFrom(buffer, serialised_length) == SNMP_ERROR_OK);
 
     // Check Meta
-    REQUIRE( (packet->communityString == readPacket->communityString) );
-    REQUIRE( packet->requestID == readPacket->requestID );
-    REQUIRE( packet->snmpVersion == readPacket->snmpVersion );
+    REQUIRE( (packet->communityString == staticPacket->communityString) );
+    REQUIRE( packet->requestID == staticPacket->requestID );
+    REQUIRE( packet->snmpVersion == staticPacket->snmpVersion );
 
     // Check Varbinds
     REQUIRE( packet->varbindList.size() == 5 );
@@ -124,11 +127,11 @@ TEST_CASE( "Test Encoding/Decoding packet", "[snmp]" ) {
 }
 
 TEST_CASE( "Test GetRequestPDU", "[snmp]" ){
-    std::deque<ValueCallback*> callbacks;
+    std::deque<ValueCallbackContainer> callbacks;
 
     int testInt = 23;
     ValueCallback* integer = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.1"), &testInt);
-    callbacks.push_back(integer);
+    callbacks.emplace_back(integer);
 
     SNMPPacket *requestPacket = GenerateTestSNMPRequestPacket();
     uint8_t buffer[500];
@@ -136,7 +139,8 @@ TEST_CASE( "Test GetRequestPDU", "[snmp]" ){
     REQUIRE( buf_len > 0 );
 
     int responseLength = 0;
-    REQUIRE( handlePacket(buffer, buf_len, &responseLength, 500, callbacks, (char*)"public", (char*)"private") == SNMP_GET_OCCURRED );
+    REQUIRE(handlePacket(buffer, buf_len, &responseLength, 500, callbacks, (char *) "public", (char *) "private",
+                         liveRequests, nullptr) == SNMP_GET_OCCURRED );
 
     SNMPPacket* responsePacket = new SNMPPacket();
     REQUIRE( responsePacket->parseFrom(buffer, responseLength) == SNMP_ERROR_OK );
@@ -146,14 +150,14 @@ TEST_CASE( "Test GetRequestPDU", "[snmp]" ){
 }
 
 TEST_CASE( "Test GetNextRequestPDU", "[snmp]" ){
-    std::deque<ValueCallback*> callbacks;
+    std::deque<ValueCallbackContainer> callbacks;
 
     int testInt = 23;
     IntegerCallback* integer = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.1"), &testInt);
-    callbacks.push_back(integer);
+    callbacks.emplace_back(integer);
 
     IntegerCallback* integer2 = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.2"), &testInt);
-    callbacks.push_back(integer2);
+    callbacks.emplace_back(integer2);
 
     SNMPPacket *requestPacket = GenerateTestSNMPRequestPacket();
     requestPacket->setPDUType(GetNextRequestPDU);
@@ -162,7 +166,8 @@ TEST_CASE( "Test GetNextRequestPDU", "[snmp]" ){
     REQUIRE( buf_len > 0 );
 
     int responseLength = 0;
-    REQUIRE( handlePacket(buffer, buf_len, &responseLength, 500, callbacks, "public", "private") == SNMP_GETNEXT_OCCURRED );
+    REQUIRE(handlePacket(buffer, buf_len, &responseLength, 500, callbacks, "public", "private", liveRequests,
+                         nullptr) == SNMP_GETNEXT_OCCURRED );
 
     SNMPPacket* responsePacket = new SNMPPacket();
     REQUIRE( responsePacket->parseFrom(buffer, responseLength) == SNMP_ERROR_OK );
@@ -172,14 +177,14 @@ TEST_CASE( "Test GetNextRequestPDU", "[snmp]" ){
 }
 
 TEST_CASE( "Test GetBulkRequestPDU", "[snmp]"){
-    std::deque<ValueCallback*> callbacks;
+    std::deque<ValueCallbackContainer> callbacks;
 
     int testInt = 23;
     IntegerCallback* integer = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.1"), &testInt);
-    callbacks.push_back(integer);
+    callbacks.emplace_back(integer);
 
     IntegerCallback* integer2 = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.2"), &testInt);
-    callbacks.push_back(integer2);
+    callbacks.emplace_back(integer2);
 
     SNMPPacket *requestPacket = GenerateTestSNMPRequestPacket();
     requestPacket->varbindList.pop_back();
@@ -197,7 +202,8 @@ TEST_CASE( "Test GetBulkRequestPDU", "[snmp]"){
     REQUIRE( buf_len > 0 );
 
     int responseLength = 0;
-    REQUIRE( handlePacket(buffer, buf_len, &responseLength, 500, callbacks, (char*)"public", (char*)"private") == SNMP_GETBULK_OCCURRED );
+    REQUIRE(handlePacket(buffer, buf_len, &responseLength, 500, callbacks, (char *) "public", (char *) "private",
+                         liveRequests, nullptr) == SNMP_GETBULK_OCCURRED );
 
     SNMPPacket* responsePacket = new SNMPPacket();
     REQUIRE( responsePacket->parseFrom(buffer, responseLength) == SNMP_ERROR_OK );
@@ -211,22 +217,22 @@ TEST_CASE( "Test GetBulkRequestPDU", "[snmp]"){
 }
 
 TEST_CASE( "Test SetRequestPDU", "[snmp]" ){
-    std::deque<ValueCallback*> callbacks;
+    std::deque<ValueCallbackContainer> callbacks;
 
     int testInt = 23;
     IntegerCallback* integerCallback = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.1"), &testInt);
     integerCallback->isSettable = false;
-    callbacks.push_back(integerCallback);
+    callbacks.emplace_back(integerCallback);
 
     int testInt2 = 23;
     IntegerCallback* integerCallback2 = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.4"), &testInt2);
     integerCallback2->isSettable = true;
-    callbacks.push_back(integerCallback2);
+    callbacks.emplace_back(integerCallback2);
 
     uint8_t opaqueBuf[5] = { 1, 2, 3, 4, 5 };
     OpaqueCallback* opaqueCallback = new OpaqueCallback(new SortableOIDType(".1.3.6.1.4.1.5.7"), opaqueBuf, 5);
     opaqueCallback->isSettable = true;
-    callbacks.push_back(opaqueCallback);
+    callbacks.emplace_back(opaqueCallback);
 
     SNMPPacket *requestPacket = GenerateTestSNMPRequestPacket();
     requestPacket->setPDUType(SetRequestPDU);
@@ -240,7 +246,8 @@ TEST_CASE( "Test SetRequestPDU", "[snmp]" ){
     REQUIRE( buf_len > 0 );
 
     int responseLength = 0;
-    REQUIRE( handlePacket(buffer, buf_len, &responseLength, 500, callbacks, (char*)"public", (char*)"public") == SNMP_SET_OCCURRED );
+    REQUIRE(handlePacket(buffer, buf_len, &responseLength, 500, callbacks, (char *) "public", (char *) "public",
+                         liveRequests, nullptr) == SNMP_SET_OCCURRED );
 
     SNMPPacket* responsePacket = new SNMPPacket();
     REQUIRE( responsePacket->parseFrom(buffer, responseLength) == SNMP_ERROR_OK );
@@ -262,19 +269,19 @@ TEST_CASE( "Test SetRequestPDU", "[snmp]" ){
 
 
 TEST_CASE( "sort/remove handlers ", "[snmp]"){
-    std::deque<ValueCallback*> callbacks;
+    std::deque<ValueCallbackContainer> callbacks;
 
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.51.2"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.51.2"), nullptr));
     ValueCallback* cb = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.510.2"), nullptr);
-    callbacks.push_back(cb);
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5100.2"), nullptr));
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5100.1"), nullptr));
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.51000.1"), nullptr));
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.510.1"), nullptr));
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.51.1"), nullptr));
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1200.5100000.1"), nullptr));
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.2"), nullptr));
-    callbacks.push_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1200.5.2"), nullptr));
+    callbacks.emplace_back(cb);
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5100.2"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5100.1"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.51000.1"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.510.1"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.51.1"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1200.5100000.1"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.2"), nullptr));
+    callbacks.emplace_back(new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1200.5.2"), nullptr));
 
 
     sort_handlers(callbacks);
@@ -309,7 +316,7 @@ TEST_CASE( "sort/remove handlers ", "[snmp]"){
     REQUIRE( callbacks.size() == 9 );
 
     for(auto callback : callbacks){
-        REQUIRE( callback != cb );
+        REQUIRE( (callback != cb) );
     }
 
     // Removing CB Handler should not delete the Pointer (deleting handler deletes OID, so this should not crash)
@@ -419,4 +426,45 @@ TEST_CASE( "Test OID Validation ", "[snmp]"){
     REQUIRE( (new OIDType(".1.3.6.1.4.1.52420."))->valid );
     REQUIRE( (new OIDType("1.3.6.1.4.1.52420"))->valid == false );
     REQUIRE( (new OIDType(".1.3.6.1.4.1..52420"))->valid == false );
+}
+
+TEST_CASE( "Test OID Serialization ", "[snmp]"){
+    // 1.3.6.1.4.1.5.6688
+    std::vector<unsigned char> oidBytes = {43, 6, 1, 4, 1, 5, 180, 32};
+    auto testOID = new OIDType();
+    testOID->valid = true;
+    testOID->data = oidBytes;
+    REQUIRE( testOID->string() == ".1.3.6.1.4.1.5.6688" );
+
+    // .1.3.6.1.4.1.52420
+    oidBytes = {43, 6, 1, 4, 1, 131, 153, 68};
+    testOID = new OIDType();
+    testOID->valid = true;
+    testOID->data = oidBytes;
+    REQUIRE( testOID->string() == ".1.3.6.1.4.1.52420" );
+}
+
+TEST_CASE( "Test OID Callback finding ", "[snmp]"){
+    std::deque<ValueCallbackContainer> callbacks;
+    int temp;
+    SNMPDevice deviceA(IPAddress(192, 168, 1, 1), 161, SNMP_VERSION_2C, "public");
+    SNMPDevice deviceB(IPAddress(192, 168, 1, 1), 163, SNMP_VERSION_2C, "public");
+    SNMPDevice deviceC(IPAddress(192, 168, 2, 1), 161, SNMP_VERSION_2C, "public");
+
+    auto OIDA = new SortableOIDType(".1.3.6.1.5.1");
+    auto OIDB = new SortableOIDType(".1.3.6.1.5.2");
+
+    auto callbackA = new IntegerCallback(OIDA, &temp);
+    auto callbackB = new IntegerCallback(OIDB, &temp);
+
+    callbacks.emplace_back(&deviceA, callbackA);
+    callbacks.emplace_back(&deviceB, callbackA);
+
+    callbacks.emplace_back(callbackB);
+
+    REQUIRE( ValueCallback::findCallback(callbacks, OIDA, false, 0, nullptr, deviceA)->OID->equals(OIDA->cloneOID()) );
+    REQUIRE( ValueCallback::findCallback(callbacks, OIDA, false, 0, nullptr, deviceB)->OID->equals(OIDA->cloneOID()) );
+    REQUIRE( (!ValueCallback::findCallback(callbacks, OIDA, false, 0, nullptr, deviceC)) );
+    REQUIRE( ValueCallback::findCallback(callbacks, OIDB, false, 0, nullptr, NO_DEVICE)->OID->equals(OIDB->cloneOID()) );
+    REQUIRE( (!ValueCallback::findCallback(callbacks, OIDB, false, 0, nullptr, deviceA)) );
 }

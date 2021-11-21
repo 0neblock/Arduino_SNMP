@@ -23,13 +23,10 @@
 #define IPAddress_h
 
 #include <stdint.h>
+#include <cstdio>
+#include <string>
 
 // A class to make it easier to handle and pass around IP addresses
-
-class TEMPSTR {
-public:
-    const char* c_str(){return "";};
-};
 
 class IPAddress
 {
@@ -56,8 +53,10 @@ public:
     IPAddress(const uint8_t *address);
     virtual ~IPAddress() {}
 
-    TEMPSTR toString(){
-        return TEMPSTR();
+    std::string toString(){
+        char buf[25];
+        snprintf(buf, 24, "%d.%d.%d.%d", this->_address.bytes[0], this->_address.bytes[1], this->_address.bytes[2], this->_address.bytes[3]);
+        return std::string(buf);
     };
 
     // Overloaded cast operator to allow IPAddress objects to be used where a pointer

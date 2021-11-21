@@ -25,7 +25,7 @@ bool SNMPTrap::build(){
     trapPDU->addValueToList(std::make_shared<IntegerType>(specificTrap));
     
     if(uptimeCallback){
-        trapPDU->addValueToList(std::static_pointer_cast<TimestampType>(ValueCallback::getValueForCallback(uptimeCallback)));
+        trapPDU->addValueToList(std::static_pointer_cast<TimestampType>(uptimeCallback->buildTypeWithValue()));
     } else {
         trapPDU->addValueToList(std::make_shared<TimestampType>(0));
     }
@@ -39,7 +39,7 @@ bool SNMPTrap::build(){
 }
 
 std::shared_ptr<ComplexType> SNMPTrap::generateVarBindList(){
-    SNMP_LOGD("generateVarBindList from SNMPTrap");
+//    SNMP_LOGD("generateVarBindList from SNMPTrap");
     auto ourVBList = std::make_shared<ComplexType>(STRUCTURE);
     // If we're an SNMPv2 Trap, our first two are timestamp and OIDType, v1 already has them included
     if(this->snmpVersion == SNMP_VERSION_2C){
@@ -51,7 +51,7 @@ std::shared_ptr<ComplexType> SNMPTrap::generateVarBindList(){
         timestampVarBind->addValueToList(timestampOID->cloneOID());
 
         if(uptimeCallback){
-            timestampVarBind->addValueToList(std::static_pointer_cast<TimestampType>(ValueCallback::getValueForCallback(uptimeCallback)));
+            timestampVarBind->addValueToList(std::static_pointer_cast<TimestampType>(uptimeCallback->buildTypeWithValue()));
         } else {
             timestampVarBind->addValueToList(std::make_shared<TimestampType>(0));
         }
@@ -69,7 +69,7 @@ std::shared_ptr<ComplexType> SNMPTrap::generateVarBindList(){
         auto varBind = std::make_shared<ComplexType>(STRUCTURE);
 
         varBind->addValueToList(value->OID->cloneOID());
-        varBind->addValueToList(ValueCallback::getValueForCallback(value));
+        varBind->addValueToList(value->buildTypeWithValue());
 
         ourVBList->addValueToList(varBind);
     }

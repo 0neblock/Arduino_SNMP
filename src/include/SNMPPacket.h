@@ -7,6 +7,13 @@
 #include <math.h>
 #include <string>
 
+struct AwaitingResponse {
+    const snmp_request_id_t requestId;
+    const ASN_TYPE requestType;
+
+    AwaitingResponse(snmp_request_id_t id, ASN_TYPE type): requestId(id), requestType(type){}
+};
+
 enum SNMPParsingState {
     SNMPVERSION,
     COMMUNITY,
@@ -38,7 +45,8 @@ union ErrorIndex {
 class SNMPPacket {
   public:
     SNMPPacket(){};
-    explicit SNMPPacket(const SNMPPacket& packet){
+    SNMPPacket(ASN_TYPE type): packetPDUType(type){};
+    SNMPPacket(const SNMPPacket& packet){
         this->setRequestID(packet.requestID);
         this->setVersion(packet.snmpVersion);
         this->setCommunityString(packet.communityString);
@@ -67,7 +75,7 @@ class SNMPPacket {
     //TODO: put checks in all these setters
     void setCommunityString(std::string);
     void setRequestID(snmp_request_id_t);
-    bool setPDUType(ASN_TYPE);
+
     void setVersion(SNMP_VERSION);
 
     bool reuse = false;
@@ -91,7 +99,7 @@ class SNMPPacket {
     
   protected:
     virtual bool build();
-
+    bool setPDUType(ASN_TYPE);
     virtual std::shared_ptr<ComplexType> generateVarBindList();
 
   private:

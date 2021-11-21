@@ -11,6 +11,8 @@ class VarBind {
     VarBind(const std::shared_ptr<OIDType>& oid, const std::shared_ptr<BER_CONTAINER>& value): oid(oid), type(value->_type), value(value){};
     VarBind(const std::shared_ptr<OIDType>& oid, SNMP_ERROR_STATUS error): oid(oid), type(NULLTYPE), value(new NullType()), errorStatus(error){};
 
+    VarBind(const std::shared_ptr<OIDType>& oid): oid(oid), type(NULLTYPE), value(new NullType()){};
+
     VarBind(const SortableOIDType* oid, const std::shared_ptr<BER_CONTAINER>& value): oid(oid->cloneOID()), type(value->_type), value(value){};
     VarBind(const SortableOIDType* oid, SNMP_ERROR_STATUS error): oid(oid->cloneOID()), type(NULLTYPE), value(new NullType()), errorStatus(error){};
 

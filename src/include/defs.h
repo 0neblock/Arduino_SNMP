@@ -18,10 +18,13 @@ typedef enum SNMP_ERROR_RESPONSE {
     SNMP_SET_OCCURRED = 5,
     SNMP_ERROR_PACKET_SENT = 6, // A packet indicating that an error occurred was sent
     SNMP_INFORM_RESPONSE_OCCURRED = 7,
-    SNMP_UNKNOWN_PDU_OCCURRED = 8
+    SNMP_UNKNOWN_PDU_OCCURRED = 8,
+    SNMP_RESPONSE_RECEIVED = 9,
+    SNMP_UNSOLICITED_RESPONSE_PDU_RECEIVED = 10,
+
 } SNMP_ERROR_RESPONSE;
 
-typedef unsigned long snmp_request_id_t;
+typedef unsigned int snmp_request_id_t;
 
 #define INVALID_SNMP_REQUEST_ID 0
 
@@ -124,10 +127,10 @@ int32_t         sysServices;            /* .1.3.6.1.2.1.1.7.0 */
         #define SNMP_LOGE(...) printf(__VA_ARGS__)
         
     #else
-        #define SNMP_LOGD(...)
-        #define SNMP_LOGI(...)
-        #define SNMP_LOGW(...)
-        #define SNMP_LOGE(...)
+        #define SNMP_LOGD(...) printf(__VA_ARGS__)
+        #define SNMP_LOGI(...) printf(__VA_ARGS__)
+        #define SNMP_LOGW(...) printf(__VA_ARGS__)
+        #define SNMP_LOGE(...) printf(__VA_ARGS__)
         
     #endif
 #endif

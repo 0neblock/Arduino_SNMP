@@ -14,12 +14,15 @@
 // #define ASSERT_CALLBACK_SETTABLE if(!(static_cast<ValueCallback*>(this)->isSettable)) return SETTING_NON_SETTABLE_ERROR;
 #define ASSERT_CALLBACK_SETTABLE()
 
-ValueCallback* ValueCallback::findCallback(std::deque<ValueCallback*> &callbacks, const OIDType* const oid, bool walk, size_t startAt, size_t *foundAt){
+ValueCallbackContainer ValueCallback::findCallback(std::deque<ValueCallbackContainer> &callbacks, const OIDType* const oid, bool walk, size_t startAt, size_t *foundAt, const SNMPDevice &device){
     bool useNext = false;
 
     for(size_t i = startAt; i < callbacks.size(); i++){
         auto callback = callbacks[i];
 
+        // If neither require device, OR the device matches, lets continue with other checks
+        if(callback.agentDevice != nullptr && !(device == *callback.agentDevice)) continue;
+        if(callback.agentDevice == nullptr && !(device == NO_DEVICE)) continue;
         if(useNext){
             if(foundAt){
                 *foundAt = i;
@@ -46,25 +49,27 @@ ValueCallback* ValueCallback::findCallback(std::deque<ValueCallback*> &callbacks
             return callback;
         }
     }
-    return nullptr;
+    return {};
 }
 
-std::shared_ptr<BER_CONTAINER> ValueCallback::getValueForCallback(ValueCallback* callback){
+std::shared_ptr<BER_CONTAINER> ValueCallback::getValueForCallback(const ValueCallbackContainer& callback){
     SNMP_LOGD("Getting value for callback of OID: %s, type: %d\n", callback->OID->string().c_str(), callback->type);
     auto value = callback->buildTypeWithValue();
     return value;
 }
 
-SNMP_ERROR_STATUS ValueCallback::setValueForCallback(ValueCallback* callback, const std::shared_ptr<BER_CONTAINER> &value){
+SNMP_ERROR_STATUS
+ValueCallback::setValueForCallback(const ValueCallbackContainer& callback, const std::shared_ptr<BER_CONTAINER> &value,
+                                   bool isAgentContext) {
     SNMP_LOGD("Setting value for callback of OID: %s\n", callback->OID->string().c_str());
 
-    if(!callback->isSettable){
+    if(isAgentContext && !callback->isSettable){
         return SETTING_NON_SETTABLE_ERROR;
     }
 
     SNMP_ERROR_STATUS valid = callback->setTypeWithValue(value.get());
 
-    if(valid == NO_ERROR){
+    if(isAgentContext && valid == NO_ERROR){
         callback->setOccurred = true;
     }
 
@@ -228,31 +233,19 @@ bool SortableOIDType::sort_oids(SortableOIDType* oid1, SortableOIDType* oid2){ /
     return map1.size() < map2.size();
 }
 
-bool compare_callbacks (const ValueCallback* first, const ValueCallback* second){
+bool compare_callbacks (ValueCallbackContainer first, ValueCallbackContainer second){
     return SortableOIDType::sort_oids(first->OID, second->OID);
 }
 
-void sort_handlers(std::deque<ValueCallback*>& callbacks){
+void sort_handlers(std::deque<ValueCallbackContainer>& callbacks){
     std::sort(callbacks.begin(), callbacks.end(), compare_callbacks);
 }
 
-bool remove_handler(std::deque<ValueCallback*>& callbacks, ValueCallback* callback){
-    int i = 0;
-    int found = -1;
-    for(auto cb : callbacks){
-        if(cb == callback){
-            found = i;
-            break;
-        }
-        i++;
-    }
-
-    if(found > -1){
-        auto it = callbacks.begin();
-        std::advance(it, found);
-        callbacks.erase(it);
-        return true;
-    } else {
-        return true;
-    }
+bool remove_handler(std::deque<ValueCallbackContainer>& callbacks, ValueCallback* callback){
+    auto it = std::remove_if(callbacks.begin(), callbacks.end(), [=](const ValueCallbackContainer& container){
+        return container.operator->() == callback;
+    });
+    auto r = std::distance(it, callbacks.end());
+    callbacks.erase(it, callbacks.end());
+    return r > 0;
 }

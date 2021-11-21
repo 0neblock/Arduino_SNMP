@@ -5,7 +5,7 @@ TEST_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name mock.cpp \! -name CM
 TEST_OBJS := $(TEST_SRCS:%=$(BUILD_DIR)/%.o)
 TEST_DEPS := $(TEST_OBJS:.o=.d)
 
-MOCK_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name SNMP_Agent.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
+MOCK_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
 MOCK_OBJS := $(MOCK_SRCS:%=$(BUILD_DIR)/%.o)
 MOCK_DEPS := $(MOCK_OBJS:.o=.d)
 
@@ -25,7 +25,7 @@ CPPFLAGS ?= -I"../src" -I"../" -MMD -MP -std=c++11 \
 	-DCOMPILING_TESTS	
 
 ifdef DEBUG
-	CPPFLAGS += -DDEBUG -g
+	CPPFLAGS += -DDEBUG=1 -DAGENT -g
 endif
 help:
 	@echo "test: Make & Run tests"

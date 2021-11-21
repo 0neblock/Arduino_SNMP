@@ -10,3 +10,15 @@ cmake-build-release-gcc10/cmake_install.cmake
 cmake-build-release-gcc10/CMakeCache.txt
 cmake-build-release-gcc10/MOCK
 cmake-build-release-gcc10/Makefile
+cmake-build-debug-wsl/Arduino_SNMP2.cbp
+cmake-build-debug-wsl/cmake_install.cmake
+cmake-build-debug-wsl/CMakeCache.txt
+cmake-build-debug-wsl/Makefile
+cmake-build-debug-wsl/MOCK
+cmake-build-debug-wsl/TESTS
+cmake-build-debug-wsl/Testing/Temporary/LastTest.log
+cmake-build-debug-visual-studio/Arduino_SNMP2.cbp
+cmake-build-debug-visual-studio/cmake_install.cmake
+cmake-build-debug-visual-studio/CMakeCache.txt
+cmake-build-debug-visual-studio/Makefile
+cmake-build-debug-visual-studio/Testing/Temporary/LastTest.log

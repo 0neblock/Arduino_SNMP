@@ -1,4 +1,5 @@
 #include "include/BER.h"
+#include <stdlib.h>
 
 // Two ways to decode an int, one way where the first byte indicates how many butes follow, and ne where you have to power things by 128
 static size_t decode_ber_longform_integer(const uint8_t* buf, long* decoded_integer, int max_len){
@@ -136,14 +137,6 @@ int OIDType::fromBuffer(const uint8_t *buf, size_t max_len){
     return _length + 2;
 }
 
-static inline void long_to_buf(char* buf, long l, short r = 0){
-    if (l > 9){
-        long_to_buf(buf++, l / 10L, r + 1);
-    }
-    *buf++ = l % 10 + '0';
-    if(!r) *buf = 0;
-}
-
 const std::string& OIDType::string() {
     if(!this->_value.length()){
         const uint8_t* dataPtr = this->data.data();
@@ -162,8 +155,7 @@ const std::string& OIDType::string() {
             int itemLength = decode_ber_longform_integer(dataPtr, &item, i);
             dataPtr += itemLength; i -= itemLength;
 
-            buffer[0] = '.';
-            long_to_buf(buffer+1, item);
+            snprintf(buffer, 15, ".%ld", item);
             this->_value.append(buffer);
         }
     }
@@ -212,7 +204,7 @@ int Counter64::fromBuffer(const uint8_t *buf, size_t max_len){
 }
 
 std::shared_ptr<BER_CONTAINER> ComplexType::createObjectForType(ASN_TYPE valueType){
-    SNMP_LOGD("Creating object of type: %d\n", valueType);
+//    SNMP_LOGD("Creating object of type: %d\n", valueType);
     switch(valueType){
         case INTEGER:
             return std::shared_ptr<BER_CONTAINER>(new IntegerType());
@@ -254,7 +246,7 @@ std::shared_ptr<BER_CONTAINER> ComplexType::createObjectForType(ASN_TYPE valueTy
         case SetRequestPDU:
         case GetBulkRequestPDU:
 
-        //case TrapPDU: // should never get v1trap, but put it in anyway
+//        case TrapPDU: // should never get v1trap, but put it in anyway
         case InformRequestPDU:
         case Trapv2PDU:
             return std::shared_ptr<BER_CONTAINER>(new ComplexType(valueType));

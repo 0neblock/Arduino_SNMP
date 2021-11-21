@@ -1,5 +1,7 @@
 #include "include/SNMPPacket.h"
 
+#include <utility>
+
 #define SNMP_PARSE_ERROR_AT_STATE(STATE) ((int)STATE * -1) - 10 + SNMP_PACKET_PARSE_ERROR_OFFSET
 
 #define ASN_TYPE_FOR_STATE_SNMPVERSION  INTEGER
@@ -105,6 +107,7 @@ SNMP_PACKET_PARSE_ERROR SNMPPacket::parsePacket(ComplexType *structure, enum SNM
                 ASSERT_ASN_TYPE_AT_STATE(vbOid, OID, VARBIND);
 
                 auto vbValue = varbindValues->values[1];
+                //TODO: should we determine if vbValue is a valid VarBind value (i.e. shouldn't be PDU etc.)
                 this->varbindList.emplace_back(
                     std::static_pointer_cast<OIDType>(vbOid),
                     vbValue
@@ -183,33 +186,33 @@ bool SNMPPacket::build(){
     return true;
 }
 
-void SNMPPacket::setCommunityString(std::string communityString){
+void SNMPPacket::setCommunityString(std::string community){
     // poison any cached containers we have
     this->communityStringPtr = nullptr;
-    this->communityString = communityString;
+    this->communityString = std::move(community);
 }
 
-void SNMPPacket::setRequestID(snmp_request_id_t requestID){
+void SNMPPacket::setRequestID(snmp_request_id_t id){
     this->requestIDPtr = nullptr;
-    this->requestID = requestID;
+    this->requestID = id;
 }
 
-bool SNMPPacket::setPDUType(ASN_TYPE responseType){
-    if(responseType >= ASN_PDU_TYPE_MIN_VALUE && responseType <= ASN_PDU_TYPE_MAX_VALUE){
+bool SNMPPacket::setPDUType(ASN_TYPE pduType){
+    if(pduType >= ASN_PDU_TYPE_MIN_VALUE && pduType <= ASN_PDU_TYPE_MAX_VALUE){
         //TODO: check that we're a valid response type
-        this->packetPDUType = responseType;
+        this->packetPDUType = pduType;
         return true;
     }
     return false;
 }
 
-void SNMPPacket::setVersion(SNMP_VERSION snmpVersion){
+void SNMPPacket::setVersion(SNMP_VERSION version){
     this->snmpVersionPtr = nullptr;
-    this->snmpVersion = snmpVersion;
+    this->snmpVersion = version;
 }
 
 std::shared_ptr<ComplexType> SNMPPacket::generateVarBindList(){
-    SNMP_LOGD("generateVarBindList from SNMPPacket");
+//    SNMP_LOGD("generateVarBindList from SNMPPacket");
     // This is for normal packets where our response values have already been built, not traps
     auto varBindList = std::make_shared<ComplexType>(STRUCTURE);
 

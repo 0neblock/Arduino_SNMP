@@ -25,7 +25,7 @@ SNMP_ERROR_RESPONSE SNMPAgent::loop(){
         if(packetLength > 0){
             SNMP_LOGD("Received packet from: %s, of size: %d", udp->remoteIP().toString().c_str(), packetLength);
 
-            if(packetLength < 0 || packetLength > MAX_SNMP_PACKET_LENGTH){
+            if(packetLength > MAX_SNMP_PACKET_LENGTH){
                 SNMP_LOGW("Incoming packet too large: %d\n", packetLength);
                 return SNMP_REQUEST_TOO_LARGE;
             }
@@ -39,7 +39,10 @@ SNMP_ERROR_RESPONSE SNMPAgent::loop(){
             }
 
             int reponseLength = 0;
-            SNMP_ERROR_RESPONSE response = handlePacket(_packetBuffer, packetLength, &reponseLength, MAX_SNMP_PACKET_LENGTH, callbacks, _community, _readOnlyCommunity, informCallback, (void*)this);
+            SNMP_ERROR_RESPONSE response = handlePacket(_packetBuffer, packetLength, &reponseLength,
+                                                        MAX_SNMP_PACKET_LENGTH, callbacks, _community,
+                                                        _readOnlyCommunity, liveRequests,
+                                                        informCallback, nullptr, (void *) this, this->deviceIdentifier);
             if(response > 0 && response != SNMP_INFORM_RESPONSE_OCCURRED){
                 // send it
                 SNMP_LOGD("Built packet, sending back response to: %s, %d\n", udp->remoteIP().toString().c_str(), udp->remotePort());
@@ -151,7 +154,7 @@ ValueCallback* SNMPAgent::addGuageHandler(char* oid, uint32_t* value, bool overw
 
 ValueCallback * SNMPAgent::addHandler(ValueCallback *callback, bool isSettable) {
     callback->isSettable = isSettable;
-    this->callbacks.push_back(callback);
+    this->callbacks.emplace_back(callback);
     return callback;
 }
 
@@ -169,9 +172,9 @@ snmp_request_id_t SNMPAgent::sendTrapTo(SNMPTrap* trap, const IPAddress& ip, boo
     return queue_and_send_trap(this->informList, trap, ip, replaceQueuedRequests, retries, delay_ms);
 }
 
-void SNMPAgent::informCallback(void* ctx, snmp_request_id_t requestID, bool responseReceiveSuccess){
-    if(!ctx) return;
-    SNMPAgent* agent = static_cast<SNMPAgent*>(ctx);
+bool SNMPAgent::informCallback(void* ctx, snmp_request_id_t requestID, bool responseReceiveSuccess){
+    if(!ctx) return false;
+    SNMPAgent* agent = (SNMPAgent*)(ctx);
 
     return inform_callback(agent->informList, requestID, responseReceiveSuccess);
 }
@@ -191,7 +194,7 @@ std::list<SNMPAgent*> SNMPAgent::agents = std::list<SNMPAgent*>();
 bool SNMPAgent::restartUDP() {
     for(auto udp : _udp){
         udp->stop();
-        udp->begin(_AgentUDPport);
+        udp->begin(agentPort);
     }
     return true;
 }

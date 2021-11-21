@@ -31,10 +31,12 @@ class SNMPAgent {
 
         SNMPAgent(const char* community): _community(community){
             SNMPAgent::agents.push_back(this);
+            this->deviceIdentifier._community = community;
         };
 
         SNMPAgent(const char* readOnlyCommunity, const char* readWriteCommunity): _community(readWriteCommunity), _readOnlyCommunity(readOnlyCommunity){
             SNMPAgent::agents.push_back(this);
+            this->deviceIdentifier._community = readWriteCommunity;
         }
 
         void setReadOnlyCommunity(std::string community){
@@ -65,9 +67,9 @@ class SNMPAgent {
         bool begin(const char* oidPrefix);
         enum SNMP_ERROR_RESPONSE loop();
         
-        short _AgentUDPport = 161;
         void setUDPport(short port){
-	        _AgentUDPport = port;
+	        agentPort = port;
+            this->deviceIdentifier._port = port;
         }
         
         bool setOccurred = false;
@@ -80,12 +82,15 @@ class SNMPAgent {
 
         snmp_request_id_t sendTrapTo(SNMPTrap* trap, const IPAddress& ip, bool replaceQueuedRequests = true, int retries = 0, int delay_ms = 30000);
         static void markTrapDeleted(SNMPTrap* trap);
-        
+
+        // Our snmpDevice is ip-agnostic because we can have multiple udp clients, which might have different IPs, but will have same port
+        // Using default address makes sense here because we can use it if we're running a manager at the same time
+        SNMPDevice deviceIdentifier = SNMPDevice(INADDR_NONE, 161, SNMP_VERSION_2C, "public");
     private:
-        std::deque<ValueCallback*> callbacks;
+        std::deque<ValueCallbackContainer> callbacks;
         ValueCallback* addHandler(ValueCallback *callback, bool isSettable);
         
-        static void informCallback(void*, snmp_request_id_t, bool);
+        static bool informCallback(void*, snmp_request_id_t, bool);
         void handleInformQueue();
 
         std::list<UDP*> _udp;
@@ -97,6 +102,9 @@ class SNMPAgent {
 
         static std::list<SNMPAgent*> agents;
         std::list<struct InformItem*> informList;
+        std::list<AwaitingResponse> liveRequests;
+
+        short agentPort = 161;
 };
 
 #endif

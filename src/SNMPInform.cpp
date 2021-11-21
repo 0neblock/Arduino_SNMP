@@ -49,7 +49,7 @@ queue_and_send_trap(std::list<struct InformItem *> &informList, SNMPTrap *trap, 
         item->trap = trap;
         item->missed = false;
 
-        SNMP_LOGD("Adding Inform request to queue: %lu\n", item->requestID);
+        SNMP_LOGD("Adding Inform request to queue: %u\n", item->requestID);
 
         informList.push_back(item);
 
@@ -63,9 +63,9 @@ queue_and_send_trap(std::list<struct InformItem *> &informList, SNMPTrap *trap, 
     return trap->requestID;
 }
 
-void inform_callback(std::list<struct InformItem *> &informList, snmp_request_id_t requestID, bool responseReceiveSuccess) {
+bool inform_callback(std::list<struct InformItem *> &informList, snmp_request_id_t requestID, bool responseReceiveSuccess) {
     (void)responseReceiveSuccess;
-    SNMP_LOGD("Receiving InformCallback for requestID: %lu, success: %d\n", requestID, responseReceiveSuccess);
+    SNMP_LOGD("Receiving InformCallback for requestID: %u, success: %d\n", requestID, responseReceiveSuccess);
     //TODO: if we ever want to keep received informs, change this logic
 
     remove_inform_from_list(informList, [requestID](struct InformItem* informItem) -> bool {
@@ -73,6 +73,7 @@ void inform_callback(std::list<struct InformItem *> &informList, snmp_request_id
     });
 
     SNMP_LOGD("Informs waiting for responses: %lu\n", informList.size());
+    return true;
 }
 
 void handle_inform_queue(std::list<struct InformItem *> &informList) {
@@ -83,11 +84,11 @@ void handle_inform_queue(std::list<struct InformItem *> &informList) {
             // check if sending again
             informItem->missed = true;
             if(!informItem->retries){
-                SNMP_LOGD("No more retries for inform: %lu, removing\n", informItem->requestID);
+                SNMP_LOGD("No more retries for inform: %u, removing\n", informItem->requestID);
                 continue;
             }
             if(informItem->trap){
-                SNMP_LOGD("No response received in %lums, Resending Inform: %lu\n", thisLoop - informItem->lastSent, informItem->requestID);
+                SNMP_LOGD("No response received in %lums, Resending Inform: %u\n", thisLoop - informItem->lastSent, informItem->requestID);
                 informItem->trap->sendTo(informItem->ip, true);
                 informItem->lastSent = thisLoop;
                 informItem->missed = false;
