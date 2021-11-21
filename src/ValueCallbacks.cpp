@@ -14,11 +14,11 @@
 // #define ASSERT_CALLBACK_SETTABLE if(!(static_cast<ValueCallback*>(this)->isSettable)) return SETTING_NON_SETTABLE_ERROR;
 #define ASSERT_CALLBACK_SETTABLE()
 
-ValueCallbackContainer ValueCallback::findCallback(std::deque<ValueCallbackContainer> &callbacks, const OIDType* const oid, bool walk, size_t startAt, size_t *foundAt, const SNMPDevice &device){
+const ValueCallbackContainer& ValueCallback::findCallback(const std::deque<ValueCallbackContainer> &callbacks, const OIDType* const oid, bool walk, size_t startAt, size_t *foundAt, const SNMPDevice &device){
     bool useNext = false;
 
     for(size_t i = startAt; i < callbacks.size(); i++){
-        auto callback = callbacks[i];
+        auto& callback = callbacks[i];
 
         // If neither require device, OR the device matches, lets continue with other checks
         if(callback.agentDevice != nullptr && !(device == *callback.agentDevice)) continue;
@@ -49,7 +49,7 @@ ValueCallbackContainer ValueCallback::findCallback(std::deque<ValueCallbackConta
             return callback;
         }
     }
-    return {};
+    return NO_CALLBACK;
 }
 
 std::shared_ptr<BER_CONTAINER> ValueCallback::getValueForCallback(const ValueCallbackContainer& callback){
@@ -209,7 +209,7 @@ SNMP_ERROR_STATUS Counter64Callback::setTypeWithValue(BER_CONTAINER* rawValue){
     return NO_ERROR;
 }
 
-bool SortableOIDType::sort_oids(SortableOIDType* oid1, SortableOIDType* oid2){ // returns true if oid1 EARLIER than oid2
+bool SortableOIDType::sort_oids(const SortableOIDType* oid1, const SortableOIDType* oid2){ // returns true if oid1 EARLIER than oid2
     const auto& map1 = oid1->sortingMap;
     const auto& map2 = oid2->sortingMap;
 
@@ -233,7 +233,7 @@ bool SortableOIDType::sort_oids(SortableOIDType* oid1, SortableOIDType* oid2){ /
     return map1.size() < map2.size();
 }
 
-bool compare_callbacks (ValueCallbackContainer first, ValueCallbackContainer second){
+bool compare_callbacks (ValueCallbackContainer& first, ValueCallbackContainer& second){
     return SortableOIDType::sort_oids(first->OID, second->OID);
 }
 

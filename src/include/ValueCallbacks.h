@@ -14,7 +14,8 @@ class ValueCallbackContainer {
   public:
     explicit ValueCallbackContainer(ValueCallback* callback): valueCallback(callback){};
     explicit ValueCallbackContainer(SNMPDevice* ip, ValueCallback* callback): agentDevice(ip), valueCallback(callback) {};
-    explicit ValueCallbackContainer(SNMPDevice* ip, ValueCallback* callback, std::shared_ptr<PollingInfo> pollingInfo): agentDevice(ip), pollingInfo(pollingInfo), valueCallback(callback){};
+    explicit ValueCallbackContainer(SNMPDevice* ip, ValueCallback* callback, std::shared_ptr<PollingInfo> pollingInfo): agentDevice(ip), pollingInfo(std::move(pollingInfo)), valueCallback(callback){};
+    ValueCallbackContainer(const ValueCallbackContainer& other): agentDevice(other.agentDevice), pollingInfo(other.pollingInfo), valueCallback(other.valueCallback){};
 
     ValueCallback* operator -> () const {
         return this->valueCallback;
@@ -31,18 +32,21 @@ class ValueCallbackContainer {
     explicit operator bool() const {
         return this->valueCallback != nullptr;
     }
+    
+    ValueCallbackContainer& operator=(ValueCallbackContainer&&) {
+        return *this;
+    };
 
     // Only used in manager contexts
-    SNMPDevice* agentDevice = nullptr;
-    std::shared_ptr<PollingInfo> pollingInfo = nullptr;
+    const SNMPDevice* const agentDevice = nullptr;
+    const std::shared_ptr<PollingInfo> pollingInfo = nullptr;
 
   private:
     friend class ValueCallback;
-
-    // empty constructor is needed for nullptr
-    ValueCallbackContainer()= default;
-    ValueCallback* valueCallback = nullptr;
+    ValueCallback* const valueCallback = nullptr;
 };
+
+const ValueCallbackContainer NO_CALLBACK(nullptr);
 
 class ValueCallback {
   public:
@@ -61,7 +65,7 @@ class ValueCallback {
         setOccurred = false;
     }
 
-    static ValueCallbackContainer findCallback(std::deque<ValueCallbackContainer> &callbacks, const OIDType* const oid, bool walk, size_t startAt = 0, size_t *foundAt = nullptr, const SNMPDevice &device = NO_DEVICE);
+    static const ValueCallbackContainer& findCallback(const std::deque<ValueCallbackContainer> &callbacks, const OIDType* const oid, bool walk, size_t startAt = 0, size_t *foundAt = nullptr, const SNMPDevice &device = NO_DEVICE);
     static std::shared_ptr<BER_CONTAINER> getValueForCallback(const ValueCallbackContainer& callback);
     static SNMP_ERROR_STATUS setValueForCallback(const ValueCallbackContainer& callback, const std::shared_ptr<BER_CONTAINER> &value,
                                                  bool isAgentContext);

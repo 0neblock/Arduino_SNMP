@@ -80,7 +80,7 @@ void runagent(){
 
     printf("ready\n");
 
-    std::list<AwaitingResponse> liveRequests;
+    std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
 
     while(true){
         n = recvfrom(sockfd, (char *)buffer, MAXLINE,
@@ -156,7 +156,7 @@ void runmanager(){
     callbacks.emplace_back(&device, testCallback);
     packet.addValueCallback(testCallback);
     packet.setVersion(SNMP_VERSION_2C);
-    std::list<AwaitingResponse> liveRequests;
+    std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
 
 
 
@@ -168,7 +168,7 @@ void runmanager(){
             sendto(sockfd, (const char *)buffer, serialized,
                    0, (const struct sockaddr *) &cliaddr,
                    len);
-            liveRequests.emplace_back(packet.requestID, packet.packetPDUType);
+            liveRequests.insert({packet.requestID, packet.packetPDUType});
         }
 
         n = recvfrom(sockfd, (char *)buffer, MAXLINE,

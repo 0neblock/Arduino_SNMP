@@ -25,13 +25,16 @@ add_executable(MOCK
         src/SNMPPDUHandler.cpp
         src/SNMPResponse.cpp
         src/SNMPTrap.cpp
-        src/ValueCallbacks.cpp)
+        src/SNMP_Manager.cpp
+        src/SNMP_Agent.cpp
+        src/ValueCallbacks.cpp src/include/SNMPRequest.h src/SNMPRequest.cpp)
 
 add_executable(TESTS
         tests/required/IPAddress.cpp
         tests/tests.cpp
         src/SNMP_Agent.cpp
         src/BERDecode.cpp
+        src/SNMP_Manager.cpp
         src/BEREncode.cpp
         src/SNMPPacket.cpp
         src/SNMPParser.cpp
@@ -39,4 +42,4 @@ add_executable(TESTS
         src/SNMPPDUHandler.cpp
         src/SNMPResponse.cpp
         src/SNMPTrap.cpp
-        src/ValueCallbacks.cpp )
+        src/ValueCallbacks.cpp src/include/SNMPRequest.h src/SNMPRequest.cpp)

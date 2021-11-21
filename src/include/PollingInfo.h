@@ -11,7 +11,7 @@
 
 class ValueCallbackContainer;
 
-typedef bool (*responseCB)(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus, ValueCallbackContainer& container);
+typedef bool (*responseCB)(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus, const ValueCallbackContainer& container);
 
 class PollingInfo {
   public:

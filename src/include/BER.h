@@ -239,7 +239,7 @@ class SortableOIDType: public OIDType {
   public:
     explicit SortableOIDType(const std::string& value): OIDType(value), sortingMap(generateSortingMap()){}
 
-    static bool sort_oids(SortableOIDType* oid1, SortableOIDType* oid2);
+    static bool sort_oids(const SortableOIDType* oid1, const SortableOIDType* oid2);
 
     bool operator < (SortableOIDType& other){
         return SortableOIDType::sort_oids(this, &other);

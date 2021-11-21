@@ -23,8 +23,10 @@ void SNMPManager::loop() {
 snmp_request_id_t SNMPManager::prepare_next_polling_request(){
     // Loop through our pollers, find the first one that needs to be polled again,
     // Use its device to et the next n callbacks, then send request
-    SNMPDevice* device = nullptr;
-    std::list<ValueCallbackContainer*> callbacks;
+    const SNMPDevice* device = nullptr;
+    std::vector<ValueCallbackContainer*> callbacks;
+    callbacks.reserve(SNMPREQUEST_VARBIND_COUNT);
+
     int callbackCount = 0;
     for(auto& container : pollingCallbacks) {
         if(device == nullptr || container.agentDevice == device){
@@ -43,7 +45,7 @@ snmp_request_id_t SNMPManager::prepare_next_polling_request(){
     return 0;
 }
 
-snmp_request_id_t SNMPManager::send_polling_request(SNMPDevice* device, std::list<ValueCallbackContainer*> callbacks){
+snmp_request_id_t SNMPManager::send_polling_request(const SNMPDevice* const device, const std::vector<ValueCallbackContainer *>& callbacks){
     // Should only call if we know we're going to send a request
     SNMP_LOGD("send_polling_request: %lu", callbacks.size());
     SNMPRequest request(GetRequestPDU);
@@ -73,24 +75,18 @@ snmp_request_id_t SNMPManager::send_polling_request(SNMPDevice* device, std::lis
         for(const auto& callback : callbacks) {
             callback->pollingInfo->send(request_id);
         }
-        this->liveRequests.emplace_back(request_id, GetRequestPDU);
+        this->liveRequests.insert({request_id, GetRequestPDU});
     }
     return request_id;
 }
 
 void SNMPManager::teardown_old_requests(){
-    std::array<snmp_request_id_t, 10> cleared_request_ids;
-    int cleared = 0;
     for(const auto& container : pollingCallbacks){
-        if(cleared == 10) continue;
         if(container.pollingInfo->has_timed_out(REQUEST_TIMEOUT)){
-            cleared_request_ids[cleared++] = container.pollingInfo->last_request_id;
+            liveRequests.erase(container.pollingInfo->last_request_id);
             container.pollingInfo->reset_poller(false);
         }
     }
-    liveRequests.remove_if([&](const AwaitingResponse& request) -> bool{
-        return std::find(cleared_request_ids.begin(), cleared_request_ids.end(), request.requestId) != cleared_request_ids.end();
-    });
 }
 
 void SNMPManager::begin() {
@@ -118,7 +114,7 @@ void SNMPManager::removePoller(ValueCallback *callbackPoller, SNMPDevice *device
     this->pollingCallbacks.erase(it, this->pollingCallbacks.end());
 }
 
-bool SNMPManager::responseCallback(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus, ValueCallbackContainer& container){
+bool SNMPManager::responseCallback(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus, const ValueCallbackContainer& container){
     if(container){
         container.pollingInfo->reset_poller(success);
     } else {
@@ -149,9 +145,15 @@ SNMP_ERROR_RESPONSE SNMPManager::process_incoming_packets() {
         SNMPDevice incomingDevice = SNMPDevice(udp->remoteIP(), udp->remotePort());
 
         int reponseLength = 0;
-        return handlePacket(_packetBuffer, packetLength, &reponseLength,
+
+        auto start = millis();
+
+        auto ret = handlePacket(_packetBuffer, packetLength, &reponseLength,
                                                     MAX_SNMP_PACKET_LENGTH, pollingCallbacks, "",
                                                     "", liveRequests, nullptr, &responseCallback, nullptr, incomingDevice);
+        auto end = millis() - start;
+        SNMP_LOGI("Handled Manager Response packet in: %lu millis\n", end);
+        return ret;
     }
     return SNMP_NO_PACKET;
 }

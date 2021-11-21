@@ -22,6 +22,7 @@
 #include <list>
 #include <deque>
 #include <string>
+#include <unordered_map>
 
 class SNMPAgent {
     public:
@@ -102,7 +103,7 @@ class SNMPAgent {
 
         static std::list<SNMPAgent*> agents;
         std::list<struct InformItem*> informList;
-        std::list<AwaitingResponse> liveRequests;
+        std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
 
         short agentPort = 161;
 };

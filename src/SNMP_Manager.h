@@ -9,6 +9,7 @@
 #include "include/PollingInfo.h"
 #include <string>
 #include <list>
+#include <unordered_map>
 #include "include/SNMPPacket.h"
 
 #define SNMPREQUEST_VARBIND_COUNT 6
@@ -36,7 +37,7 @@ class SNMPManager {
     }
 
     std::deque<ValueCallbackContainer> pollingCallbacks;
-    std::list<AwaitingResponse> liveRequests;
+    std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
 
     uint8_t _packetBuffer[MAX_SNMP_PACKET_LENGTH] = {0};
 
@@ -44,14 +45,14 @@ class SNMPManager {
 
     UDP* udp;
 
-    snmp_request_id_t send_polling_request(SNMPDevice* device, std::list<ValueCallbackContainer*> callbacks);
+    snmp_request_id_t send_polling_request(const SNMPDevice* device, const std::vector<ValueCallbackContainer *>& callbacks);
 
     snmp_request_id_t prepare_next_polling_request();
 
     SNMP_ERROR_RESPONSE process_incoming_packets();
 
     static bool responseCallback(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus,
-                          ValueCallbackContainer &container);
+                          const ValueCallbackContainer &container);
 };
 
 #endif //SNMP_MANAGER_H

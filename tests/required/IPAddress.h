@@ -53,7 +53,7 @@ public:
     IPAddress(const uint8_t *address);
     virtual ~IPAddress() {}
 
-    std::string toString(){
+    std::string toString() const {
         char buf[25];
         snprintf(buf, 24, "%d.%d.%d.%d", this->_address.bytes[0], this->_address.bytes[1], this->_address.bytes[2], this->_address.bytes[3]);
         return std::string(buf);

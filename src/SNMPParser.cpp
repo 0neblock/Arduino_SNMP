@@ -1,6 +1,7 @@
 #include "include/SNMPParser.h"
 #include <string>
 
+
 static SNMP_PERMISSION getPermissionOfRequest(const SNMPPacket& request, const std::string& _community, const std::string& _readOnlyCommunity){
     SNMP_PERMISSION requestPermission = SNMP_PERM_NONE;
     SNMP_LOGD("communitystring in packet: %s\n", request.communityString.c_str());
@@ -18,7 +19,7 @@ static SNMP_PERMISSION getPermissionOfRequest(const SNMPPacket& request, const s
 SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *responseLength, int max_packet_size,
                                  std::deque<ValueCallbackContainer> &callbacks, const std::string &_community,
                                  const std::string &_readOnlyCommunity,
-                                 std::list<AwaitingResponse> &liveRequests, informCB informCallback,
+                                 std::unordered_map<snmp_request_id_t, ASN_TYPE> &liveRequests, informCB informCallback,
                                  responseCB responseCallback, void *ctx, const SNMPDevice& device) {
     // we can't type the incoming packet, so we only type the packets we send out
     SNMPPacket incomingPacket;
@@ -33,32 +34,31 @@ SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *respons
 
     if(incomingPacket.packetPDUType == GetResponsePDU){
         SNMP_LOGD("Received GetResponse! requestID: %u\n", incomingPacket.requestID);
-        auto matchingRequest = std::find_if(liveRequests.begin(), liveRequests.end(), [=](const AwaitingResponse& request){
-            return request.requestId == incomingPacket.requestID;
-        });
+        auto matchingRequest = liveRequests.find(incomingPacket.requestID);
         if(matchingRequest != liveRequests.end()){
-            liveRequests.remove_if([=](const AwaitingResponse& request){
-                return request.requestId == incomingPacket.requestID;
-            });
-
             // Update SNMPDevice with community and version
             SNMPDevice updatedDevice = SNMPDevice(device, incomingPacket.snmpVersion, incomingPacket.communityString);
-
-            switch(matchingRequest->requestType){
+            SNMP_ERROR_RESPONSE ret = SNMP_GENERIC_ERROR;
+            switch(matchingRequest->second){
                 case GetRequestPDU:
                 case SetRequestPDU:
                 {
                     // Match response to request
                     handleGetResponsePDU(callbacks, incomingPacket.varbindList, incomingPacket.errorStatus, incomingPacket.errorIndex, updatedDevice, responseCallback);
-                    return SNMP_RESPONSE_RECEIVED;
+                    ret = SNMP_RESPONSE_RECEIVED;
+                    break;
                 }
                 case InformRequestPDU:
                     if(informCallback) informCallback(ctx, incomingPacket.requestID, !incomingPacket.errorStatus.errorStatus);
-                    return SNMP_INFORM_RESPONSE_OCCURRED;
+                    ret = SNMP_INFORM_RESPONSE_OCCURRED;
+                    break;
                 default:
-                    SNMP_LOGW("Can't handle the response packet from request type (this should be static assert): %u, %u\n", matchingRequest->requestType, incomingPacket.requestID);
-                    return SNMP_GENERIC_ERROR;
+                    SNMP_LOGW("Can't handle the response packet from request type (this should be static assert): %u, %u, %u\n", matchingRequest->first, matchingRequest->second, incomingPacket.requestID);
+                    ret = SNMP_GENERIC_ERROR;
+                    break;
             }
+            liveRequests.erase(incomingPacket.requestID);
+            return ret;
         } else {
             SNMP_LOGW("Not sure what to do with ResponsePacket: %u\n", incomingPacket.requestID);
             return SNMP_UNSOLICITED_RESPONSE_PDU_RECEIVED;

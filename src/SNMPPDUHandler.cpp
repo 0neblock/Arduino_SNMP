@@ -7,7 +7,7 @@ bool handleGetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deq
     SNMP_LOGD("handleGetRequestPDU\n");
     for(const VarBind& requestVarBind : varbindList){
         SNMP_LOGD("finding callback for OID: %s\n", requestVarBind.oid->string().c_str());
-        auto callback = ValueCallback::findCallback(callbacks, requestVarBind.oid.get(), isGetNextRequest);
+        auto& callback = ValueCallback::findCallback(callbacks, requestVarBind.oid.get(), isGetNextRequest);
         if(!callback){
             SNMP_LOGD("Couldn't find callback\n");
 #if 1
@@ -45,7 +45,7 @@ bool handleSetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deq
     SNMP_LOGD("handleSetRequestPDU\n");
     for(const VarBind& requestVarBind : varbindList){
         SNMP_LOGD("finding callback for OID: %s\n", requestVarBind.oid->string().c_str());
-        auto callback = ValueCallback::findCallback(callbacks, requestVarBind.oid.get(), false);
+        auto& callback = ValueCallback::findCallback(callbacks, requestVarBind.oid.get(), false);
         if(!callback){
             SNMP_LOGD("Couldn't find callback\n");
             outResponseList.emplace_back(requestVarBind.oid, SNMP_ERROR_VERSION_CTRL_DEF(NOT_WRITABLE, snmpVersion, NO_SUCH_NAME));
@@ -98,7 +98,7 @@ bool handleGetBulkRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std:
         // handle GET normally, but mark endOfMibView if not found
         for(unsigned int i = 0; i < nonRepeaters && i < varbindList.size(); i++){
             const VarBind& requestVarBind = varbindList[i];
-            auto callback = ValueCallback::findCallback(callbacks, requestVarBind.oid.get(), true);
+            auto& callback = ValueCallback::findCallback(callbacks, requestVarBind.oid.get(), true);
             if(!callback){
                 outResponseList.emplace_back(requestVarBind, std::make_shared<ImplicitNullType>(ENDOFMIBVIEW));
                 continue;
@@ -126,7 +126,7 @@ bool handleGetBulkRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std:
 
             for(unsigned int j = 0; j < maxRepititions; j++){
                 SNMP_LOGD("finding next callback for OID: %s\n", oid->string().c_str());
-                auto callback = ValueCallback::findCallback(callbacks, oid.get(), true, foundAt, &foundAt);
+                auto& callback = ValueCallback::findCallback(callbacks, oid.get(), true, foundAt, &foundAt);
                 if(!callback){
                     // We're done, mark endOfMibView
                     outResponseList.emplace_back(oid, std::make_shared<ImplicitNullType>(ENDOFMIBVIEW));
@@ -166,7 +166,7 @@ bool handleGetResponsePDU(std::deque<ValueCallbackContainer> &callbacks, std::de
     int i = 1;
     for(const VarBind& responseVarBind : varbindList){
         SNMP_LOGD("finding callback for OID: %s\n", responseVarBind.oid->string().c_str());
-        auto callback = ValueCallback::findCallback(callbacks, responseVarBind.oid.get(), false, 0, nullptr, device);
+        auto& callback = ValueCallback::findCallback(callbacks, responseVarBind.oid.get(), false, 0, nullptr, device);
         if(!callback){
             // If we'd done a GetNextRequest, we might not have the ValueCallback in our callbacks, so how to tell application?
             SNMP_LOGD("Couldn't find callback\n");

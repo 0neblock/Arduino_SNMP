@@ -10,6 +10,7 @@
 
 #include <deque>
 #include <list>
+#include <unordered_map>
 
 typedef bool (*informCB)(void* ctx, snmp_request_id_t, bool);
 
@@ -21,7 +22,7 @@ bool handleGetResponsePDU(std::deque<ValueCallbackContainer> &callbacks, std::de
 SNMP_ERROR_RESPONSE handlePacket(uint8_t *buffer, int packetLength, int *responseLength, int max_packet_size,
                                  std::deque<ValueCallbackContainer> &callbacks, const std::string &_community,
                                  const std::string &_readOnlyCommunity,
-                                 std::list<AwaitingResponse> &liveRequests, informCB informCallback = nullptr,
+                                 std::unordered_map<snmp_request_id_t, ASN_TYPE> &liveRequests, informCB informCallback = nullptr,
                                  responseCB responseCallback = nullptr, void *ctx = nullptr, const SNMPDevice& device = NO_DEVICE);
 
 #endif
