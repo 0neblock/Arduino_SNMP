@@ -12,11 +12,12 @@
 #endif
 
 #include "include/BER.h"
+#include "include/VarBinds.h"
 #include <memory>
 
 class ValueCallbackContainer;
 
-typedef bool (*responseCB)(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus,
+typedef bool (*responseCB)(const VarBind &responseOID, bool success, int errorStatus,
                            const ValueCallbackContainer &container);
 
 class PollingInfo {

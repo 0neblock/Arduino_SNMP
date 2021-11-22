@@ -3,8 +3,8 @@
 #include "include/ValueCallbacks.h"
 #include "include/defs.h"
 
-bool handleGetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind> &varbindList,
-                         std::deque<VarBind> &outResponseList, SNMP_VERSION snmpVersion, bool isGetNextRequest) {
+bool handleGetRequestPDU(const CallbackList &callbacks, const VarBindList &varbindList,
+                         VarBindList &outResponseList, SNMP_VERSION snmpVersion, bool isGetNextRequest) {
     SNMP_LOGD("handleGetRequestPDU\n");
     for (const VarBind &requestVarBind : varbindList) {
         SNMP_LOGD("finding callback for OID: %s\n", requestVarBind.oid->string().c_str());
@@ -42,8 +42,8 @@ bool handleGetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deq
     return true;// we didn't fail in our job, even if we filled in nothing
 }
 
-bool handleSetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind> &varbindList,
-                         std::deque<VarBind> &outResponseList, SNMP_VERSION snmpVersion) {
+bool handleSetRequestPDU(const CallbackList &callbacks, const VarBindList &varbindList,
+                         VarBindList &outResponseList, SNMP_VERSION snmpVersion) {
     SNMP_LOGD("handleSetRequestPDU\n");
     for (const VarBind &requestVarBind : varbindList) {
         SNMP_LOGD("finding callback for OID: %s\n", requestVarBind.oid->string().c_str());
@@ -90,8 +90,8 @@ bool handleSetRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deq
     return true;// we didn't fail in our job
 }
 
-bool handleGetBulkRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind> &varbindList,
-                             std::deque<VarBind> &outResponseList, unsigned int nonRepeaters,
+bool handleGetBulkRequestPDU(const CallbackList &callbacks, const VarBindList &varbindList,
+                             VarBindList &outResponseList, unsigned int nonRepeaters,
                              unsigned int maxRepititions) {
     // from https://tools.ietf.org/html/rfc1448#page-18
     SNMP_LOGD("handleGetBulkRequestPDU, nonRepeaters:%d, maxRepititions:%d, varbindSize:%ld\n", nonRepeaters,
@@ -160,14 +160,7 @@ bool handleGetBulkRequestPDU(std::deque<ValueCallbackContainer> &callbacks, std:
     return true;
 }
 
-static bool varbind_is_error_type(const VarBind &varbind) {
-    return varbind.value->_type == NULLTYPE ||
-           varbind.value->_type == NOSUCHOBJECT ||
-           varbind.value->_type == NOSUCHINSTANCE ||
-           varbind.value->_type == ENDOFMIBVIEW;
-}
-
-bool handleGetResponsePDU(std::deque<ValueCallbackContainer> &callbacks, std::deque<VarBind> &varbindList,
+bool handleGetResponsePDU(const CallbackList &callbacks, const VarBindList &varbindList,
                           ErrorStatus errorStatus, ErrorIndex errorIndex, const SNMPDevice &device,
                           responseCB responseCallback) {
     SNMP_LOGD("handleGetResponsePDU\n");
@@ -175,26 +168,27 @@ bool handleGetResponsePDU(std::deque<ValueCallbackContainer> &callbacks, std::de
     for (const VarBind &responseVarBind : varbindList) {
         SNMP_LOGD("finding callback for OID: %s\n", responseVarBind.oid->string().c_str());
         auto &callback = ValueCallback::findCallback(callbacks, responseVarBind.oid.get(), false, 0, nullptr, device);
-        if (!callback) {
-            // If we'd done a GetNextRequest, we might not have the ValueCallback in our callbacks, so how to tell application?
-            SNMP_LOGD("Couldn't find callback\n");
-            continue;
-        }
-        bool isError = varbind_is_error_type(responseVarBind) || i == errorIndex.errorIndex;
-        if (isError) {
-            //TODO: If we get one invalid response, do we stop processing the remaining VBs?
-            SNMP_LOGI("Invalid response found for OID: %s\n", callback->OID->string().c_str());
-            if (i == errorIndex.errorIndex) {
-                SNMP_LOGI("Error recorded for OID: %s, %d\n", callback->OID->string().c_str(), errorStatus.errorStatus);
+        bool isError = responseVarBind.is_error_type() || i == errorIndex.errorIndex;
+        if (callback) {
+            if (isError) {
+                //TODO: If we get one invalid response, do we stop processing the remaining VBs?
+                SNMP_LOGI("Invalid response found for OID: %s\n", callback->OID->string().c_str());
+                SNMP_LOGI("Response type: %s %d\n", ASN_TYPE_STR(responseVarBind.type), responseVarBind.type);
+                if (i == errorIndex.errorIndex) {
+                    SNMP_LOGI("Error recorded for OID: %s, %0xd\n", callback->OID->string().c_str(), errorStatus.errorStatus);
+                }
+            } else {
+                auto setAttempt = ValueCallback::setValueForCallback(callback, responseVarBind.value, false);
+                SNMP_LOGI("Recorded GetResponse for OID: %s, setAttempt: %d\n", callback->OID->string().c_str(),
+                          setAttempt);
             }
         } else {
-            auto setAttempt = ValueCallback::setValueForCallback(callback, responseVarBind.value, false);
-            SNMP_LOGI("Recorded GetResponse for OID: %s, setAttempt: %d\n", callback->OID->string().c_str(),
-                      setAttempt);
+            // If we'd done a GetNextRequest, we might not have the ValueCallback in our callbacks, so how to tell application?
+            SNMP_LOGD("Couldn't find callback\n");
         }
 
         if (responseCallback)
-            responseCallback(responseVarBind.oid, !isError, i == errorIndex.errorIndex ? errorStatus.errorStatus : 0,
+            responseCallback(responseVarBind, !isError, i == errorIndex.errorIndex ? errorStatus.errorStatus : 0,
                              callback);
 
         i++;

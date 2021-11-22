@@ -1,6 +1,7 @@
 #ifndef SNMPPacket_h
 #define SNMPPacket_h
 
+#include "SNMPParser.h"
 #include "VarBinds.h"
 #include "defs.h"
 #include <math.h>
@@ -23,17 +24,6 @@ typedef int SNMP_PACKET_PARSE_ERROR;
 
 #define SNMP_PARSE_ERROR_MAGIC_BYTE -2 + SNMP_PACKET_PARSE_ERROR_OFFSET
 #define SNMP_PARSE_ERROR_GENERIC -1 + SNMP_PACKET_PARSE_ERROR_OFFSET
-
-
-union ErrorStatus {
-    SNMP_ERROR_STATUS errorStatus;
-    int nonRepeaters;
-};
-
-union ErrorIndex {
-    int errorIndex;
-    int maxRepititions;
-};
 
 class SNMPPacket {
   public:
@@ -87,7 +77,7 @@ class SNMPPacket {
 
     ASN_TYPE packetPDUType;
 
-    std::deque<VarBind> varbindList;
+    VarBindList varbindList;
 
     union ErrorStatus errorStatus = {NO_ERROR};
     union ErrorIndex errorIndex = {0};

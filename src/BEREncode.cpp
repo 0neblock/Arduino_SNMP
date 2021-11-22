@@ -120,12 +120,12 @@ int OctetType::serialise(uint8_t *buf, const size_t max_len) const {
 }
 
 int OpaqueType::serialise(uint8_t *buf, const size_t max_len) const {
-    int i = BER_CONTAINER::serialise(buf, max_len, _dataLength);
+    int i = BER_CONTAINER::serialise(buf, max_len, _value.size());
     CHECK_ENCODE_ERR(i);
     uint8_t *ptr = buf + i;
 
-    memcpy(ptr, _value, _dataLength);
-    ptr += _dataLength;
+    memcpy(ptr, _value.data(), _value.size());
+    ptr += _value.size();
 
     return ptr - buf;
 }

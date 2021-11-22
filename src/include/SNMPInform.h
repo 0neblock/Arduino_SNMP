@@ -11,27 +11,36 @@
 
 #endif
 
-#include <functional>
-#include <list>
-
 struct InformItem {
     snmp_request_id_t requestID;
+    SNMPTrap *trap;
+
     int retries;
     unsigned long delay_ms;
     bool received;
     IPAddress ip;
     unsigned long lastSent;
-    SNMPTrap *trap;
     bool missed;
+
+    InformItem(snmp_request_id_t id, SNMPTrap *trap) : requestID(id), trap(trap){};
+
+    bool operator==(snmp_request_id_t id) {
+        return this->requestID == id;
+    }
+
+    bool operator==(SNMPTrap *t) {
+        return this->trap == t;
+    }
 };
 
-snmp_request_id_t queue_and_send_trap(std::list<struct InformItem *> &informList, SNMPTrap *trap, const IPAddress &ip,
-                                      bool replaceQueuedRequests, int retries, int delay_ms);
+typedef sbo::small_vector<InformItem, 4> InformList;
 
-bool inform_callback(std::list<struct InformItem *> &informList, snmp_request_id_t requestID, bool responseReceiveSuccess);
+snmp_request_id_t queue_and_send_trap(InformList &informList, SNMPTrap *trap, const IPAddress &ip, bool replaceQueuedRequests, int retries, int delay_ms, LiveRequestList &liveRequests);
 
-void handle_inform_queue(std::list<struct InformItem *> &informList);
+bool inform_callback(InformList &informList, snmp_request_id_t requestID, bool responseReceiveSuccess, LiveRequestList &liveRequests);
 
-void mark_trap_deleted(std::list<struct InformItem *> &informList, SNMPTrap *trap);
+void handle_inform_queue(InformList &informList, LiveRequestList &liveRequests);
+
+void mark_trap_deleted(InformList &informList, SNMPTrap *trap, LiveRequestList &liveRequests);
 
 #endif

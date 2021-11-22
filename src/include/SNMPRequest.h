@@ -14,7 +14,7 @@ class SNMPRequest : public SNMPPacket {
     explicit SNMPRequest(ASN_TYPE type) : SNMPPacket(type) {}
 
     void addValueCallback(ValueCallback *callback) {
-        if (this->packetPDUType == GetRequestPDU) {
+        if (this->packetPDUType == GetRequestPDU || this->packetPDUType == GetNextRequestPDU) {
             // fill in OIDs with nullptr values
             this->varbindList.emplace_back(callback->OID->cloneOID());
         } else if (this->packetPDUType == SetRequestPDU) {

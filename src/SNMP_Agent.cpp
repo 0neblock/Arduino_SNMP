@@ -59,12 +59,14 @@ SNMP_ERROR_RESPONSE SNMPAgent::loop() {
                 setOccurred = true;
             }
 
-            this->handleInformQueue();
             return response;
         }
     }
 
-    this->handleInformQueue();
+    if (millis() - this->last_processed > 1000) {
+        this->handleInformQueue();
+        this->last_processed = millis();
+    }
     return SNMP_NO_PACKET;
 }
 
@@ -86,7 +88,7 @@ SortableOIDType *SNMPAgent::buildOIDWithPrefix(const char *oid, bool overwritePr
 }
 
 ValueCallback *
-SNMPAgent::addReadWriteStringHandler(const char *oid, char **value, size_t max_len, bool isSettable, bool overwritePrefix) {
+SNMPAgent::addReadWriteStringHandler(const char *oid, char *const *const value, size_t max_len, bool isSettable, bool overwritePrefix) {
     if (!value || !*value) return nullptr;
 
     SortableOIDType *oidType = buildOIDWithPrefix(oid, overwritePrefix);
@@ -174,27 +176,27 @@ bool SNMPAgent::sortHandlers() {
 
 snmp_request_id_t
 SNMPAgent::sendTrapTo(SNMPTrap *trap, const IPAddress &ip, bool replaceQueuedRequests, int retries, int delay_ms) {
-    return queue_and_send_trap(this->informList, trap, ip, replaceQueuedRequests, retries, delay_ms);
+    return queue_and_send_trap(this->informList, trap, ip, replaceQueuedRequests, retries, delay_ms, this->liveRequests);
 }
 
 bool SNMPAgent::informCallback(void *ctx, snmp_request_id_t requestID, bool responseReceiveSuccess) {
     if (!ctx) return false;
     SNMPAgent *agent = (SNMPAgent *) (ctx);
 
-    return inform_callback(agent->informList, requestID, responseReceiveSuccess);
+    return inform_callback(agent->informList, requestID, responseReceiveSuccess, agent->liveRequests);
 }
 
 void SNMPAgent::handleInformQueue() {
-    handle_inform_queue(this->informList);
+    handle_inform_queue(this->informList, this->liveRequests);
 }
 
 void SNMPAgent::markTrapDeleted(SNMPTrap *trap) {
     for (auto agent : SNMPAgent::agents) {
-        mark_trap_deleted(agent->informList, trap);
+        mark_trap_deleted(agent->informList, trap, agent->liveRequests);
     }
 }
 
-std::list<SNMPAgent *> SNMPAgent::agents = std::list<SNMPAgent *>();
+std::list<SNMPAgent *> SNMPAgent::agents;
 
 bool SNMPAgent::restartUDP() {
     for (auto udp : _udp) {

@@ -63,7 +63,7 @@ snmp_request_id_t SNMPManager::send_polling_request(const SNMPDevice *const devi
     request.setCommunityString(device->_community);
 
     for (const auto callback : callbacks) {
-        if(callback == nullptr) break;
+        if (callback == nullptr) break;
         request.addValueCallback(callback->operator->());
     }
 
@@ -83,10 +83,10 @@ snmp_request_id_t SNMPManager::send_polling_request(const SNMPDevice *const devi
 
         // Record tracking
         for (const auto &callback : callbacks) {
-            if(callback == nullptr) break;
+            if (callback == nullptr) break;
             callback->pollingInfo->send(request_id);
         }
-        this->liveRequests.insert({request_id, GetRequestPDU});
+        this->liveRequests.emplace_back(request_id, GetRequestPDU);
     }
     return request_id;
 }
@@ -94,7 +94,10 @@ snmp_request_id_t SNMPManager::send_polling_request(const SNMPDevice *const devi
 void SNMPManager::teardown_old_requests() {
     for (const auto &container : pollingCallbacks) {
         if (container.pollingInfo->has_timed_out(REQUEST_TIMEOUT)) {
-            liveRequests.erase(container.pollingInfo->last_request_id);
+            auto matchingRequest = std::find_if(liveRequests.begin(), liveRequests.end(), [=](const LiveRequest &item) {
+                return item == container.pollingInfo->last_request_id;
+            });
+            if (matchingRequest != liveRequests.end()) liveRequests.erase(matchingRequest);
             container.pollingInfo->reset_poller(false);
         }
     }
@@ -108,15 +111,6 @@ void SNMPManager::setUDP(UDP *u) {
     this->udp = u;
 }
 
-ValueCallback *SNMPManager::addIntegerPoller(SNMPDevice *device, const char *oid, int *value, unsigned long pollingInterval) {
-    if (!value) return nullptr;
-
-    auto *oidType = new SortableOIDType(std::string(oid));
-    ValueCallback *callback = new IntegerCallback(oidType, value);
-
-    return this->addCallbackPoller(device, callback, pollingInterval);
-}
-
 void SNMPManager::removePoller(ValueCallback *callbackPoller, SNMPDevice *device) {
     // remove poller
     auto it = std::remove_if(this->pollingCallbacks.begin(), this->pollingCallbacks.end(),
@@ -126,12 +120,12 @@ void SNMPManager::removePoller(ValueCallback *callbackPoller, SNMPDevice *device
     this->pollingCallbacks.erase(it, this->pollingCallbacks.end());
 }
 
-bool SNMPManager::responseCallback(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus,
+bool SNMPManager::responseCallback(const VarBind &responseVarBind, bool success, int errorStatus,
                                    const ValueCallbackContainer &container) {
     if (container) {
         container.pollingInfo->reset_poller(success);
     } else {
-        SNMP_LOGW("Unsolicited OID response: %s\n", responseOID->string().c_str());
+        SNMP_LOGW("Unsolicited OID response: %s\n", responseVarBind.oid->string().c_str());
         SNMP_LOGD("Error Status: %d\n", errorStatus);
     }
     return true;
@@ -175,4 +169,22 @@ ValueCallback *SNMPManager::addCallbackPoller(SNMPDevice *device, ValueCallback 
     auto pollingInfo = std::make_shared<PollingInfo>(pollingInterval);
     this->pollingCallbacks.emplace_back(device, callback, pollingInfo);
     return callback;
+}
+
+ValueCallback *SNMPManager::addIntegerPoller(SNMPDevice *device, const char *oid, int *value, unsigned long pollingInterval) {
+    if (!value) return nullptr;
+
+    auto *oidType = new SortableOIDType(std::string(oid));
+    ValueCallback *callback = new IntegerCallback(oidType, value);
+
+    return this->addCallbackPoller(device, callback, pollingInterval);
+}
+
+ValueCallback *SNMPManager::addStringPoller(SNMPDevice *device, const char *oid, char *const *value, unsigned long pollingInterval, size_t max_len) {
+    if (!value) return nullptr;
+
+    auto *oidType = new SortableOIDType(std::string(oid));
+    ValueCallback *callback = new StringCallback(oidType, value, max_len);
+
+    return this->addCallbackPoller(device, callback, pollingInterval);
 }

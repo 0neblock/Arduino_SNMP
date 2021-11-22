@@ -11,7 +11,7 @@
 
 #include <list>
 
-std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
+LiveRequestList liveRequests;
 
 static SNMPPacket *GenerateTestSNMPRequestPacket() {
     SNMPPacket *packet = new SNMPPacket();
@@ -435,7 +435,7 @@ TEST_CASE("Test OID Validation ", "[snmp]") {
 
 TEST_CASE("Test OID Serialization ", "[snmp]") {
     // 1.3.6.1.4.1.5.6688
-    std::vector<unsigned char> oidBytes = {43, 6, 1, 4, 1, 5, 180, 32};
+    OIDTypeData oidBytes = {43, 6, 1, 4, 1, 5, 180, 32};
     auto testOID = new OIDType();
     testOID->valid = true;
     testOID->data = oidBytes;
@@ -472,4 +472,26 @@ TEST_CASE("Test OID Callback finding ", "[snmp]") {
     REQUIRE((!ValueCallback::findCallback(callbacks, OIDA, false, 0, nullptr, deviceC)));
     REQUIRE(ValueCallback::findCallback(callbacks, OIDB, false, 0, nullptr, NO_DEVICE)->OID->equals(OIDB->cloneOID()));
     REQUIRE((!ValueCallback::findCallback(callbacks, OIDB, false, 0, nullptr, deviceA)));
+}
+
+TEST_CASE("Test Request ID Tracking", "[snmp]"){
+    liveRequests.clear();
+    snmp_request_id_t rId1 = 12345678;
+    snmp_request_id_t rId2 = 87654321;
+    liveRequests.emplace_back(rId1, GetRequestPDU);
+    liveRequests.emplace_back(rId2, GetRequestPDU);
+
+    SNMPPacket fakeResponse(GetResponsePDU);
+    fakeResponse.setRequestID(rId1);
+
+    uint8_t packet[MAX_SNMP_PACKET_LENGTH] = {0};
+    auto packetLength = fakeResponse.serialiseInto(packet, MAX_SNMP_PACKET_LENGTH);
+
+    int responseLength;
+    CallbackList  list;
+
+    handlePacket(packet, packetLength, &responseLength, MAX_SNMP_PACKET_LENGTH, list, "", "", liveRequests, nullptr, nullptr, nullptr);
+
+    REQUIRE(liveRequests.size() == 1);
+    REQUIRE(liveRequests[0] == rId2);
 }

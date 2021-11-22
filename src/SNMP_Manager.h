@@ -7,7 +7,9 @@
 
 #include "include/PollingInfo.h"
 #include "include/SNMPPacket.h"
+#include "include/SNMPParser.h"
 #include "include/ValueCallbacks.h"
+#include "include/small_vector.h"
 #include <list>
 #include <string>
 #include <unordered_map>
@@ -20,7 +22,8 @@ class SNMPManager {
 
     SNMPManager(const char *community) : _defaultCommunity(community){};
 
-    ValueCallback *addIntegerPoller(SNMPDevice *device, const char *oid, int *value, unsigned long pollingInterval = 30000);
+    ValueCallback *addIntegerPoller(SNMPDevice *device, const char *oid, int *value, unsigned long pollingInterval);
+    ValueCallback *addStringPoller(SNMPDevice *device, const char *oid, char *const *value, unsigned long pollingInterval, size_t max_len);
 
     void removePoller(ValueCallback *callbackPoller, SNMPDevice *device);
 
@@ -35,8 +38,8 @@ class SNMPManager {
 
     ValueCallback *addCallbackPoller(SNMPDevice *device, ValueCallback *callback, unsigned long pollingInterval);
 
-    std::deque<ValueCallbackContainer> pollingCallbacks;
-    std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
+    CallbackList pollingCallbacks;
+    LiveRequestList liveRequests;
 
     uint8_t _packetBuffer[MAX_SNMP_PACKET_LENGTH] = {0};
 
@@ -51,7 +54,7 @@ class SNMPManager {
 
     SNMP_ERROR_RESPONSE process_incoming_packets();
 
-    static bool responseCallback(std::shared_ptr<OIDType> responseOID, bool success, int errorStatus,
+    static bool responseCallback(const VarBind &responseVarBind, bool success, int errorStatus,
                                  const ValueCallbackContainer &container);
     unsigned long last_processed;
 };

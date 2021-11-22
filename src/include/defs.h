@@ -32,7 +32,6 @@ typedef unsigned int snmp_request_id_t;
 
 #define INVALID_SNMP_REQUEST_ID 0
 
-
 typedef enum SnmpVersionEnum {
     SNMP_VERSION_1,
     SNMP_VERSION_2C,
@@ -106,6 +105,16 @@ typedef struct RFC1213SystemStruct {
     char *sysLocation;   /* .1.3.6.1.2.1.1.6.0 */
     int32_t sysServices; /* .1.3.6.1.2.1.1.7.0 */
 } RFC1213_list;
+
+union ErrorStatus {
+    SNMP_ERROR_STATUS errorStatus;
+    int nonRepeaters;
+};
+
+union ErrorIndex {
+    int errorIndex;
+    int maxRepititions;
+};
 
 // DEBUG
 #ifndef COMPILING_TESTS

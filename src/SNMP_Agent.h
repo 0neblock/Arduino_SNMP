@@ -54,7 +54,7 @@ class SNMPAgent {
 
     ValueCallback *addIntegerHandler(const char *oid, int *value, bool isSettable = false, bool overwritePrefix = false);
 
-    ValueCallback *addReadWriteStringHandler(const char *oid, char **value, size_t max_len = 0, bool isSettable = false,
+    ValueCallback *addReadWriteStringHandler(const char *oid, char *const *const value, size_t max_len = 0, bool isSettable = false,
                                              bool overwritePrefix = false);
 
     ValueCallback *addReadOnlyStaticStringHandler(const char *oid, std::string value, bool overwritePrefix = false);
@@ -102,18 +102,18 @@ class SNMPAgent {
 
     static void markTrapDeleted(SNMPTrap *trap);
 
-    // Our snmpDevice is ip-agnostic because we can have multiple udp clients, which might have different IPs, but will have same port
+    // Our snmpDevice is ip-agnostic because we can have multiple udp clients, which might have different IPs
     // Using default address makes sense here because we can use it if we're running a manager at the same time
     //    SNMPDevice deviceIdentifier = SNMPDevice(INADDR_NONE, 161, SNMP_VERSION_2C, "public");
+    void handleInformQueue();
 
   private:
-    std::deque<ValueCallbackContainer> callbacks;
+    CallbackList callbacks;
 
     ValueCallback *addHandler(ValueCallback *callback, bool isSettable);
 
     static bool informCallback(void *, snmp_request_id_t, bool);
 
-    void handleInformQueue();
 
     std::list<UDP *> _udp;
 
@@ -123,10 +123,11 @@ class SNMPAgent {
     SortableOIDType *buildOIDWithPrefix(const char *oid, bool overwritePrefix);
 
     static std::list<SNMPAgent *> agents;
-    std::list<struct InformItem *> informList;
-    std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
+    InformList informList;
+    LiveRequestList liveRequests;
 
     short agentPort = 161;
+    unsigned long last_processed;
 };
 
 #endif

@@ -20,7 +20,7 @@
 #define MAXLINE 1024
 
 std::deque<ValueCallbackContainer> callbacks;
-
+const uint8_t address[4] = {192, 168, 1, 88};
 int testingInt = 0;
 
 void runagent() {
@@ -79,7 +79,7 @@ void runagent() {
 
     printf("ready\n");
 
-    std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
+    LiveRequestList liveRequests;
 
     while (true) {
         n = recvfrom(sockfd, (char *) buffer, MAXLINE,
@@ -101,10 +101,22 @@ void runagent() {
     }
 }
 
+bool responseCallback(const VarBind& responseVarBind, bool success, int errorStatus,
+                 const ValueCallbackContainer &container) {
+    SNMP_LOGI("Response callback for oid: %s, success: %s\n", responseVarBind.oid->string().c_str(), success ? "true" : "false");
+    if (container) {
+        SNMP_LOGI("Had matching callback\n");
+    } else {
+        SNMP_LOGW("Unsolicited OID response: %s\n", responseVarBind.oid->string().c_str());
+        SNMP_LOGD("Error Status: %d\n", errorStatus);
+    }
+    return true;
+}
+
 void runmanager() {
     struct sockaddr_in senderaddr;
     struct sockaddr_in cliaddr;
-    uint8_t address[4] = {192, 168, 246, 140};
+
 
     int sockfd, csockfd;
     uint8_t buffer[MAXLINE];
@@ -118,7 +130,8 @@ void runmanager() {
     // Filling server information
     senderaddr.sin_family = AF_INET;// IPv4
     senderaddr.sin_port = htons(10062);
-    memcpy(&senderaddr.sin_addr.s_addr, address, 4);
+    senderaddr.sin_addr.s_addr = INADDR_ANY;
+
 
     // Bind the socket with the server address
     if (bind(sockfd, (const struct sockaddr *) &senderaddr,
@@ -131,7 +144,7 @@ void runmanager() {
     cliaddr.sin_family = AF_INET;// IPv4
     cliaddr.sin_port = htons(161);
     cliaddr.sin_addr.s_addr = INADDR_ANY;
-
+    memcpy(&cliaddr.sin_addr.s_addr, address, 4);
     // Creating socket file descriptor
     if ((csockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("socket creation failed");
@@ -143,28 +156,35 @@ void runmanager() {
     len = sizeof(cliaddr);//len is value/resuslt
 
     // sockfd is our listening manager for responses, and our sending channel
-    auto packet = SNMPRequest(GetRequestPDU);
-    packet.setCommunityString("public");
+
+    LiveRequestList liveRequests;
 
     SNMPDevice device(address, 161);
-
-    int testValue = 0;
-    auto testCallback = new IntegerCallback(new SortableOIDType(".1.3.6.1.4.1.5.6688"), &testValue);
-    callbacks.emplace_back(&device, testCallback);
-    packet.addValueCallback(testCallback);
-    packet.setVersion(SNMP_VERSION_2C);
-    std::unordered_map<snmp_request_id_t, ASN_TYPE> liveRequests;
 
 
     while (true) {
         getchar();
+
+        auto packet = SNMPRequest(GetNextRequestPDU);
+        packet.setCommunityString("public");
+
+
+        int testValue = 0;
+        char oid[50] = {0};
+        uint32_t r = rand() / 100000 * 2;
+        snprintf(oid, 50, ".1.3.6.1.4.1.5.%d", r);
+        auto testCallback = new IntegerCallback(new SortableOIDType(oid), &testValue);
+        callbacks.emplace_back(&device, testCallback);
+        packet.addValueCallback(testCallback);
+        packet.setVersion(SNMP_VERSION_2C);
+
         auto serialized = packet.serialiseInto(buffer, MAXLINE);
 
         if (serialized > 0) {
             sendto(sockfd, (const char *) buffer, serialized,
                    0, (const struct sockaddr *) &cliaddr,
                    len);
-            liveRequests.insert({packet.requestID, packet.packetPDUType});
+            liveRequests.emplace_back(packet.requestID, packet.packetPDUType);
         }
 
         n = recvfrom(sockfd, (char *) buffer, MAXLINE,
@@ -178,10 +198,11 @@ void runmanager() {
         SNMPDevice incomingDevice(cliaddr.sin_addr.s_addr, 161);
         printf("Packet from: %s:%d\n", incomingDevice._ip.toString().c_str(), incomingDevice._port);
         SNMP_ERROR_RESPONSE response = handlePacket((uint8_t *) buffer, n, &responseLength, 1024, callbacks, "public",
-                                                    "pub", liveRequests, nullptr, nullptr, nullptr, incomingDevice);
+                                                    "pub", liveRequests, nullptr, responseCallback, nullptr, incomingDevice);
 
-        printf("SNMP Packet : %d, len:%d, id: %u\n", response, responseLength, packet.requestID);
+        printf("SNMP Packet : %d, len:%d, requestId: %u\n", response, responseLength, packet.requestID);
         printf("int value: %d\n", testValue);
+        printf("Live Requests: %lu\n", liveRequests.size());
         //        if(response > 0){
         //            sendto(sockfd, (const char *)buffer, responseLength,
         //                   0, (const struct sockaddr *) &cliaddr,

@@ -1,6 +1,7 @@
 #include "include/ValueCallbacks.h"
 #include "include/BER.h"
 
+#include "include/SNMPParser.h"
 #include <algorithm>
 
 #define ASSERT_VALID_VALUE(value) \
@@ -18,7 +19,7 @@
 #define ASSERT_CALLBACK_SETTABLE()
 
 const ValueCallbackContainer &
-ValueCallback::findCallback(const std::deque<ValueCallbackContainer> &callbacks, const OIDType *const oid, bool walk,
+ValueCallback::findCallback(const CallbackList &callbacks, const OIDType *const oid, bool walk,
                             size_t startAt, size_t *foundAt, const SNMPDevice &device) {
     bool useNext = false;
 
@@ -135,7 +136,6 @@ SNMP_ERROR_STATUS StringCallback::setTypeWithValue(BER_CONTAINER *rawValue) cons
     OctetType *val = static_cast<OctetType *>(rawValue);
     if (val->_value.length() >= this->max_len) return WRONG_LENGTH;
     strncpy(*this->value, val->_value.data(), this->max_len);
-
     return NO_ERROR;
 }
 
@@ -154,9 +154,9 @@ SNMP_ERROR_STATUS OpaqueCallback::setTypeWithValue(BER_CONTAINER *rawValue) cons
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
     OpaqueType *val = static_cast<OpaqueType *>(rawValue);
-    ASSERT_VALID_SETTING_VALUE(val->_value);
-    if (val->_dataLength > this->data_len) return WRONG_LENGTH;
-    memcpy(this->value, val->_value, this->data_len);
+    ASSERT_VALID_SETTING_VALUE((val->_value.size() > 0));
+    if (val->_value.size() > (unsigned long) this->data_len) return WRONG_LENGTH;
+    memcpy(this->value, val->_value.data(), this->data_len);
 
     return NO_ERROR;
 }

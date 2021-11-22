@@ -19,6 +19,8 @@
 #endif
 
 #include "include/defs.h"
+#include "small_vector.h"
+#include <deque>
 #include <memory>
 
 typedef enum ASN_TYPE_WITH_VALUE {
@@ -56,6 +58,8 @@ typedef enum ASN_TYPE_WITH_VALUE {
     Trapv2PDU = 0xA7
 
 } ASN_TYPE;
+
+const char *ASN_TYPE_STR(ASN_TYPE);
 
 #define ASN_PDU_TYPE_MIN_VALUE GetRequestPDU
 #define ASN_PDU_TYPE_MAX_VALUE Trapv2PDU
@@ -109,6 +113,11 @@ class BER_CONTAINER {
 
     friend class ComplexType;
 };
+
+typedef sbo::small_vector<std::shared_ptr<BER_CONTAINER>, 8> BerContainerList;
+typedef sbo::small_vector<uint8_t, 16> OIDTypeData;
+typedef sbo::small_vector<uint8_t, 16> OpaqueTypeData;
+
 
 class NetworkAddress : public BER_CONTAINER {
   public:
@@ -174,17 +183,13 @@ class OctetType : public BER_CONTAINER {
 class OpaqueType : public BER_CONTAINER {
   public:
     OpaqueType(uint8_t *value, int length) : OpaqueType() {
-        this->_value = (uint8_t *) calloc(length, sizeof(uint8_t));
-        memcpy(this->_value, value, length);
-        this->_dataLength = length;
+        this->_value.reserve(length);
+        for (int j = 0; j < length; j++) {
+            this->_value.push_back(*(value + j));
+        }
     }
 
-    ~OpaqueType() override {
-        if (this->_value) free(this->_value);
-    }
-
-    uint8_t *_value = nullptr;
-    int _dataLength = 0;
+    OpaqueTypeData _value;
 
   protected:
     int serialise(uint8_t *buf, const size_t max_len) const override;
@@ -201,7 +206,7 @@ class OIDTestHelper {
 
 class OIDType : public BER_CONTAINER {
   public:
-    explicit OIDType(const std::string &value) : BER_CONTAINER(OID), _value(value) {
+    explicit OIDType(std::string value) : BER_CONTAINER(OID), _value(std::move(value)) {
         // When creating a user OID, we generate our data vector immediately
         this->valid = this->generateInternalData();
     };
@@ -216,7 +221,7 @@ class OIDType : public BER_CONTAINER {
 
     bool valid = false;
 
-    bool equals(const std::shared_ptr<OIDType> oid) const {
+    bool equals(const std::shared_ptr<OIDType> &oid) const {
         return this->data == oid->data;
     }
 
@@ -242,13 +247,13 @@ class OIDType : public BER_CONTAINER {
 
     // Value is only filled if we make it ourselves or a decoded one gets string() called on it
     std::string _value;
-    std::vector<uint8_t> data;
+    OIDTypeData data;
 
   private:
-    explicit OIDType(const std::string &value, const std::vector<uint8_t> &data, bool valid) : BER_CONTAINER(OID),
-                                                                                               valid(valid),
-                                                                                               _value(value),
-                                                                                               data(data){};
+    explicit OIDType(std::string value, const OIDTypeData &data, bool valid) : BER_CONTAINER(OID),
+                                                                               valid(valid),
+                                                                               _value(std::move(value)),
+                                                                               data(data){};
 
     bool generateInternalData();
 };
@@ -259,7 +264,7 @@ class SortableOIDType : public OIDType {
 
     static bool sort_oids(const SortableOIDType *oid1, const SortableOIDType *oid2);
 
-    bool operator<(SortableOIDType &other) {
+    bool operator<(SortableOIDType &other) const {
         return SortableOIDType::sort_oids(this, &other);
     }
 
@@ -320,7 +325,7 @@ class ComplexType : public BER_CONTAINER {
   public:
     explicit ComplexType(ASN_TYPE type) : BER_CONTAINER(type){};
 
-    std::vector<std::shared_ptr<BER_CONTAINER>> values;
+    BerContainerList values;
 
     int fromBuffer(const uint8_t *buf, const size_t max_len) override;
 

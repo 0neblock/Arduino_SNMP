@@ -1,6 +1,19 @@
 #include "include/BER.h"
 #include <stdlib.h>
 
+const char *ASN_TYPE_STR(ASN_TYPE type) {
+    switch (type) {
+        case NOSUCHINSTANCE:
+            return "NOSUCHINSTANCE";
+        case NOSUCHOBJECT:
+            return "NOSUCHOBJECT";
+        case ENDOFMIBVIEW:
+            return "ENDOFMIBVIEW";
+        default:
+            return "";
+    }
+}
+
 // Two ways to decode an int, one way where the first byte indicates how many butes follow, and ne where you have to power things by 128
 static size_t decode_ber_longform_integer(const uint8_t *buf, long *decoded_integer, int max_len) {
     int i = 1;
@@ -117,9 +130,10 @@ int OpaqueType::fromBuffer(const uint8_t *buf, const size_t max_len) {
     CHECK_DECODE_ERR(i);
     const uint8_t *ptr = buf + i;
 
-    _value = (uint8_t *) calloc(_length, sizeof(char));
-    memcpy(_value, (char *) ptr, _length);
-    _dataLength = _length;
+    this->_value.reserve(_length);
+    for (int j = 0; j < _length; j++) {
+        this->_value.push_back(*(ptr + j));
+    }
 
     return _length + i;
 }

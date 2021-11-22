@@ -130,11 +130,11 @@ class ReadOnlyStringCallback : public ValueCallback {
 
 class StringCallback : public ValueCallback {
   public:
-    StringCallback(SortableOIDType *oid, char **value, const int max_len) : ValueCallback(oid, STRING), value(value),
-                                                                            max_len(max_len){};
+    StringCallback(SortableOIDType *oid, char *const *const value, const int max_len) : ValueCallback(oid, STRING), value(value),
+                                                                                        max_len(max_len){};
 
   protected:
-    char **const value;
+    char *const *const value;
     const size_t max_len;
 
     std::shared_ptr<BER_CONTAINER> buildTypeWithValue() const override;

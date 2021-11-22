@@ -23,3 +23,24 @@ cmake-build-debug-visual-studio/CMakeCache.txt
 cmake-build-debug-visual-studio/Makefile
 cmake-build-debug-visual-studio/Testing/Temporary/LastTest.log
 tests/tests.d
+.vs/CMake Overview
+.vs/ProjectSettings.json
+.vs/slnx.sqlite
+.vs/VSWorkspaceState.json
+.vs/Arduino_SNMP/project-colors.json
+.vs/Arduino_SNMP/v17/.suo
+.vs/Arduino_SNMP/v17/Current/Browse.VC.db
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/157994640a4a4dba/BERDECODE.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/2405a23562a9e7b8/SNMPPDUHANDLER.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/2aa71375b9234fac/SNMP_MANAGER.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/64cee5b32401fd7f/SNMP_AGENT.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/82035cbc7f1662bf/VALUECALLBACKS.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/983806b883682146/SNMP_AGENT.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/a24e98dd14241911/SNMPPDUHANDLER.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/c3b197bcc782b7de/SNMPPARSER.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/c544751a576035b9/BERDECODE.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/e78a0b11515db999/SNMP_MANAGER.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/e9a671eda242e286/VALUECALLBACKS.ipch
+.vs/Arduino_SNMP/v17/Current/ipch/AutoPCH/ec14e18cb768abbf/SNMPPARSER.ipch
+.vs/Arduino_SNMP/v17/TestStore/0/000.testlog
+.vs/Arduino_SNMP/v17/TestStore/0/testlog.manifest

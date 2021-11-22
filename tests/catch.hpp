@@ -335,7 +335,7 @@ namespace Catch {
 // Check if variant is available and usable
 #if __has_include(<variant>) && defined(CATCH_CPP17_OR_GREATER)
 #if defined(__clang__) && (__clang_major__ < 8)
-// work around clang bug with libstdc++ https://bugs.llvm.org/show_bug.cgi?id=31852
+// work around clang bug with libstdc++ https://bugs.llvm.org/show_bug.cgi?requestId=31852
 // fix should be in clang 8, workaround in libstdc++ 8.2
 #include <ciso646>
 #if defined(__GLIBCXX__) && defined(_GLIBCXX_RELEASE) && (_GLIBCXX_RELEASE < 9)
@@ -1587,13 +1587,13 @@ namespace Catch {
 #endif
 
 void arcSafeRelease(NSObject *obj);
-id performOptionalSelector(id obj, SEL sel);
+requestId performOptionalSelector(requestId obj, SEL sel);
 
 #if !CATCH_ARC_ENABLED
 inline void arcSafeRelease(NSObject *obj) {
     [obj release];
 }
-inline id performOptionalSelector(id obj, SEL sel) {
+inline requestId performOptionalSelector(requestId obj, SEL sel) {
     if ([obj respondsToSelector:sel])
         return [obj performSelector:sel];
     return nil;
@@ -1602,7 +1602,7 @@ inline id performOptionalSelector(id obj, SEL sel) {
 #define CATCH_ARC_STRONG
 #else
 inline void arcSafeRelease(NSObject *) {}
-inline id performOptionalSelector(id obj, SEL sel) {
+inline requestId performOptionalSelector(requestId obj, SEL sel) {
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
@@ -3454,7 +3454,7 @@ namespace Catch {
             };
 
 #if defined(__OBJC__)
-            // Hack to fix Catch GH issue #1661. Could use id for generic Object support.
+            // Hack to fix Catch GH issue #1661. Could use requestId for generic Object support.
             // use of const for Object pointers is very uncommon and under ARC it causes some kind of signature mismatch that breaks compilation
             template<>
             struct MatcherMethod<NSString *> {
@@ -5175,7 +5175,7 @@ namespace Catch {
         OcMethod(Class cls, SEL sel) : m_cls(cls), m_sel(sel) {}
 
         virtual void invoke() const {
-            id obj = [[m_cls alloc] init];
+            requestId obj = [[m_cls alloc] init];
 
             performOptionalSelector(obj, @selector(setUp));
             performOptionalSelector(obj, m_sel);
@@ -5199,7 +5199,7 @@ namespace Catch {
             NSString *selStr = [[NSString alloc] initWithFormat:@"Catch_%s_%s", annotationName.c_str(), testCaseName.c_str()];
             SEL sel = NSSelectorFromString(selStr);
             arcSafeRelease(selStr);
-            id value = performOptionalSelector(cls, sel);
+            requestId value = performOptionalSelector(cls, sel);
             if (value)
                 return [(NSString *) value UTF8String];
             return "";
@@ -11272,7 +11272,7 @@ namespace {
 
 namespace Catch {
     struct SignalDefs {
-        DWORD id;
+        DWORD requestId;
         const char *name;
     };
 
@@ -11288,7 +11288,7 @@ namespace Catch {
 
     LONG CALLBACK FatalConditionHandler::handleVectoredException(PEXCEPTION_POINTERS ExceptionInfo) {
         for (auto const &def : signalDefs) {
-            if (ExceptionInfo->ExceptionRecord->ExceptionCode == def.id) {
+            if (ExceptionInfo->ExceptionRecord->ExceptionCode == def.requestId) {
                 reportFatal(def.name);
             }
         }

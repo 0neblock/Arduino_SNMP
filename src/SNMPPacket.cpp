@@ -42,7 +42,6 @@ SNMP_PACKET_PARSE_ERROR SNMPPacket::parsePacket(ComplexType *structure, enum SNM
         if (state == DONE) break;
 
         switch (state) {
-
             case SNMPVERSION:
                 ASSERT_ASN_STATE_TYPE(value, SNMPVERSION);
                 this->snmpVersionPtr = std::static_pointer_cast<IntegerType>(value);
