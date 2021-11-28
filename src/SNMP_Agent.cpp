@@ -8,7 +8,6 @@ bool SNMPAgent::setUDP(UDP* udp){
     return true;
 }
 
-
 bool SNMPAgent::begin(){
     this->restartUDP();
     return true;
@@ -17,6 +16,12 @@ bool SNMPAgent::begin(){
 bool SNMPAgent::begin(const char* prefix){
     this->oidPrefix = prefix;
     return this->begin();
+}
+
+void SNMPAgent::stop(){
+    for(auto udp : _udp){
+        udp->stop();
+    }
 }
 
 SNMP_ERROR_RESPONSE SNMPAgent::loop(){
@@ -111,7 +116,7 @@ ValueCallback* SNMPAgent::addIntegerHandler(char* oid, int* value, bool isSettab
     return addHandler(new IntegerCallback(oidType, value), isSettable);
 }
 
-ValueCallback* SNMPAgent::addTimestampHandler(char* oid, int* value, bool isSettable, bool overwritePrefix){
+ValueCallback* SNMPAgent::addTimestampHandler(char* oid, uint32_t* value, bool isSettable, bool overwritePrefix){
     if(!value) return nullptr;
 
     SortableOIDType* oidType = buildOIDWithPrefix(oid, overwritePrefix);

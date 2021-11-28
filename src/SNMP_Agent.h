@@ -2,11 +2,18 @@
 #define SNMPAgent_h
 
 #ifdef COMPILING_TESTS
-    #include "tests/required/millis.h"
-    #include "tests/required/IPAddress.h"
-    #include "tests/required/UDP.h"
+	#include "tests/required/millis.h"
+	#include "tests/required/IPAddress.h"
+	#include "tests/required/UDP.h"
 #else
-    #include <WiFiUdp.h>
+	#include <Arduino.h>
+	#include "IPAddress.h"
+	
+	#if defined(ESP8266) || defined(ESP32)
+		#include <WiFiUdp.h>
+	#else
+		#include "Udp.h"
+	#endif
 #endif
 
 #include "include/BER.h"
@@ -52,7 +59,7 @@ class SNMPAgent {
         ValueCallback* addReadWriteStringHandler(char* oid, char** value, size_t max_len = 0, bool isSettable = false, bool overwritePrefix = false);
         ValueCallback* addReadOnlyStaticStringHandler(char* oid, std::string value, bool overwritePrefix = false);
         ValueCallback* addOpaqueHandler(char* oid, uint8_t* value, size_t data_len, bool isSettable = false, bool overwritePrefix = false);
-        ValueCallback* addTimestampHandler(char* oid, int* value, bool isSettable = false, bool overwritePrefix = false);
+        ValueCallback* addTimestampHandler(char* oid, uint32_t* value, bool isSettable = false, bool overwritePrefix = false);
         ValueCallback* addOIDHandler(char* oid, std::string value, bool overwritePrefix = false);
         ValueCallback* addCounter64Handler(char* oid, uint64_t* value, bool overwritePrefix = false);
         ValueCallback* addCounter32Handler(char* oid, uint32_t* value, bool overwritePrefix = false);
@@ -63,7 +70,8 @@ class SNMPAgent {
 
         bool begin();
         bool begin(const char* oidPrefix);
-        enum SNMP_ERROR_RESPONSE loop();
+        void stop();
+	enum SNMP_ERROR_RESPONSE loop();
         
         short _AgentUDPport = 161;
         void setUDPport(short port){
