@@ -7,7 +7,6 @@
 #include <WiFiUdp.h>
 #include <SNMP_Agent.h>
 
-#include <FS.h>
 #include <LITTLEFS.h>    // For storing and retreiving previous values or states (note: SPIFFS is deprecated and replaced by LittleFS)
 #include <ArduinoJson.h> // Saved data will be stored in JSON
 
