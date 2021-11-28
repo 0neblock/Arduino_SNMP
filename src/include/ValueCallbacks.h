@@ -49,10 +49,10 @@ class IntegerCallback: public ValueCallback {
 
 class TimestampCallback: public ValueCallback {
   public:
-    TimestampCallback(SortableOIDType* oid, int* value): ValueCallback(oid, TIMESTAMP), value(value) {};
+    TimestampCallback(SortableOIDType* oid, uint32_t* value): ValueCallback(oid, TIMESTAMP), value(value) {};
 
   protected:
-    int* const value;
+    uint32_t* const value;
 
     std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
     SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER* value) override;

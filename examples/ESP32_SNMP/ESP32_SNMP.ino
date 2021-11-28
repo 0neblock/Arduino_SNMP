@@ -18,7 +18,7 @@ SNMPAgent snmp = SNMPAgent("public", "private");
 // Numbers used to response to Get requests
 int changingNumber = 1;
 int settableNumber = 0;
-int tensOfMillisCounter = 0;
+uint32_t tensOfMillisCounter = 0;
 
 // arbitrary data will be stored here to act as an OPAQUE data-type
 uint8_t* stuff = 0;
