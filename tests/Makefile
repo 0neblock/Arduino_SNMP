@@ -9,7 +9,7 @@ MOCK_SRCS := $(shell find $(SRC_DIRS) -name \*.cpp \! -name SNMP_Agent.cpp \! -n
 MOCK_OBJS := $(MOCK_SRCS:%=$(BUILD_DIR)/%.o)
 MOCK_DEPS := $(MOCK_OBJS:.o=.d)
 
-EXAMPLE_SRCS := $(shell find $(SRC_DIRS) \( -name \*.cpp -o -name \*.ino \) \! -name mock.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
+EXAMPLE_SRCS := $(shell find $(SRC_DIRS) \( -name \*.cpp -o -name ESP32_SNMP.ino \) \! -name mock.cpp \! -name tests.cpp \! -name CMakeCXXCompilerId.cpp)
 EXAMPLE_OBJS := $(EXAMPLE_SRCS:%=$(BUILD_DIR)/%.o)
 
 CC = c++
