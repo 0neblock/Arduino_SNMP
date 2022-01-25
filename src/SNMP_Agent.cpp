@@ -170,8 +170,8 @@ bool SNMPAgent::sortHandlers(){
     return true;
 }
 
-snmp_request_id_t SNMPAgent::sendTrapTo(SNMPTrap* trap, const IPAddress& ip, bool replaceQueuedRequests, int retries, int delay_ms){
-    return queue_and_send_trap(this->informList, trap, ip, replaceQueuedRequests, retries, delay_ms);
+snmp_request_id_t SNMPAgent::sendTrapTo(SNMPTrap* trap, const IPAddress& ip, CallbackFunctionSendStatus callbackFunctionSendStatus, bool replaceQueuedRequests, int retries, int delay_ms){
+    return queue_and_send_trap(this->informList, trap, ip, replaceQueuedRequests, retries, delay_ms, callbackFunctionSendStatus);
 }
 
 void SNMPAgent::informCallback(void* ctx, snmp_request_id_t requestID, bool responseReceiveSuccess){
