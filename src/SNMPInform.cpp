@@ -94,6 +94,7 @@ void inform_callback(std::list<struct InformItem *> &informList, snmp_request_id
 
 void handle_inform_queue(std::list<struct InformItem *> &informList) {
     auto thisLoop = millis();
+    bool flagRemove = false;
     for(auto informItem : informList){
         if(!informItem->received && thisLoop - informItem->lastSent > informItem->delay_ms){
             SNMP_LOGD("Missed Inform receive\n");
@@ -101,6 +102,7 @@ void handle_inform_queue(std::list<struct InformItem *> &informList) {
             informItem->missed = true;
             if(!informItem->retries){
                 SNMP_LOGD("No more retries for inform: %lu, removing\n", informItem->requestID);
+                flagRemove = true;
                 continue;
             }
             if(informItem->trap){
@@ -112,7 +114,7 @@ void handle_inform_queue(std::list<struct InformItem *> &informList) {
             }
         }
     }
-    remove_inform_from_list(informList, [](struct InformItem* informItem) -> bool {
+    if (flagRemove) remove_inform_from_list(informList, [](struct InformItem* informItem) -> bool {
         if (informItem->callbackFunctionSendStatus){
             SNMP_LOGD("callbackFunctionSendStatus is set\n");
             delay(1);//If delete callback not working :(
