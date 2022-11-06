@@ -14,7 +14,7 @@ This is a fully-compliant SNMPv2c Agent built for Arduino's, but will work on an
 * Complex data type support:
   * NETWORK ADDRESS
   * COUNTER32 `uint32_t`
-  * GUAGE32 `uint32_t`
+  * GAUGE32 `uint32_t`
   * TIMESTAMP `uint32_t`
   * OPAQUE `uint8_t*`
   * CONTER64 `uint64_t`

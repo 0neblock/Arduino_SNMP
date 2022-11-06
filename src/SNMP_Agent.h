@@ -44,38 +44,49 @@ class SNMPAgent {
             SNMPAgent::agents.push_back(this);
         }
 
-        void setReadOnlyCommunity(std::string community){
+        void setReadOnlyCommunity(const std::string& community){
             this->_readOnlyCommunity = community;
         }
 
-        void setReadWriteCommunity(std::string community){
+        void setReadWriteCommunity(const std::string& community){
             this->_community = community;
         }
 
         std::string _community = "public";
-        std::string _readOnlyCommunity = "";
+        std::string _readOnlyCommunity;
         
-        ValueCallback* addIntegerHandler(char* oid, int* value, bool isSettable = false, bool overwritePrefix = false);
-        ValueCallback* addReadWriteStringHandler(char* oid, char** value, size_t max_len = 0, bool isSettable = false, bool overwritePrefix = false);
-        ValueCallback* addReadOnlyStaticStringHandler(char* oid, std::string value, bool overwritePrefix = false);
-        ValueCallback* addOpaqueHandler(char* oid, uint8_t* value, size_t data_len, bool isSettable = false, bool overwritePrefix = false);
-        ValueCallback* addTimestampHandler(char* oid, uint32_t* value, bool isSettable = false, bool overwritePrefix = false);
-        ValueCallback* addOIDHandler(char* oid, std::string value, bool overwritePrefix = false);
-        ValueCallback* addCounter64Handler(char* oid, uint64_t* value, bool overwritePrefix = false);
-        ValueCallback* addCounter32Handler(char* oid, uint32_t* value, bool overwritePrefix = false);
-        ValueCallback* addGuageHandler(char* oid, uint32_t* value, bool overwritePrefix);
+        ValueCallback* addIntegerHandler(const char *oid, int* value, bool isSettable = false, bool overwritePrefix = false);
+        ValueCallback* addReadOnlyIntegerHandler(const char *oid, int value, bool overwritePrefix = false);
+        ValueCallback* addDynamicIntegerHandler(const char *oid, GETINT_FUNC callback_func, bool overwritePrefix = false);
+        ValueCallback* addReadWriteStringHandler(const char *oid, char** value, size_t max_len = 0, bool isSettable = false, bool overwritePrefix = false);
+        ValueCallback* addReadOnlyStaticStringHandler(const char *oid, const std::string& value, bool overwritePrefix = false);
+        ValueCallback* addDynamicReadOnlyStringHandler(const char *oid, GETSTRING_FUNC callback_func, bool overwritePrefix = false);
+        ValueCallback* addOpaqueHandler(const char *oid, uint8_t* value, size_t data_len, bool isSettable = false, bool overwritePrefix = false);
+        ValueCallback* addTimestampHandler(const char *oid, uint32_t* value, bool isSettable = false, bool overwritePrefix = false);
+        ValueCallback* addDynamicReadOnlyTimestampHandler(const char *oid, GETUINT_FUNC callback_func, bool overwritePrefix = false);
+        ValueCallback* addOIDHandler(const char *oid, const std::string& value, bool overwritePrefix = false);
+        ValueCallback* addCounter64Handler(const char *oid, uint64_t* value, bool overwritePrefix = false);
+        ValueCallback* addCounter32Handler(const char *oid, uint32_t* value, bool overwritePrefix = false);
+        ValueCallback* addGaugeHandler(const char *oid, uint32_t* value, bool overwritePrefix = false);
+        // Depreciated, use addGaugeHandler()
+        __attribute__((deprecated)) ValueCallback* addGuageHandler(const char *oid, uint32_t* value, bool overwritePrefix = false) {
+            return addGaugeHandler(oid, value, overwritePrefix);
+        }
 
-        bool setUDP(UDP* udp);
+        void
+        setUDP(UDP* udp);
         bool restartUDP();
 
-        bool begin();
-        bool begin(const char* oidPrefix);
+        void
+        begin();
+        void
+        begin(const char* oidPrefix);
         void stop();
-	enum SNMP_ERROR_RESPONSE loop();
+	    enum SNMP_ERROR_RESPONSE loop();
         
-        short _AgentUDPport = 161;
+        short AgentUDPport = 161;
         void setUDPport(short port){
-	        _AgentUDPport = port;
+	        AgentUDPport = port;
         }
         
         bool setOccurred = false;
@@ -101,7 +112,7 @@ class SNMPAgent {
         std::string oidPrefix;
         uint8_t _packetBuffer[MAX_SNMP_PACKET_LENGTH] = {0};
 
-        SortableOIDType* buildOIDWithPrefix(char* oid, bool overwritePrefix);
+        SortableOIDType* buildOIDWithPrefix(const char *oid, bool overwritePrefix);
 
         static std::list<SNMPAgent*> agents;
         std::list<struct InformItem*> informList;

@@ -3,9 +3,9 @@
 
 static SNMP_PERMISSION getPermissionOfRequest(const SNMPPacket& request, const std::string& _community, const std::string& _readOnlyCommunity){
     SNMP_PERMISSION requestPermission = SNMP_PERM_NONE;
-    SNMP_LOGD("communitystring in packet: %s\n", request.communityString.c_str());
+    SNMP_LOGD("community string in packet: %s\n", request.communityString.c_str());
 
-    if(_readOnlyCommunity != "" && _readOnlyCommunity == request.communityString) { // snmprequest->version != 1
+    if(!_readOnlyCommunity.empty() && _readOnlyCommunity == request.communityString) { // snmprequest->version != 1
         requestPermission = SNMP_PERM_READ_ONLY;
     }
 

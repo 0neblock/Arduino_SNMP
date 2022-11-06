@@ -237,8 +237,8 @@ std::shared_ptr<BER_CONTAINER> ComplexType::createObjectForType(ASN_TYPE valueTy
             return std::shared_ptr<BER_CONTAINER>(new TimestampType());
         case COUNTER32:
             return std::shared_ptr<BER_CONTAINER>(new Counter32());
-        case GUAGE32:
-            return std::shared_ptr<BER_CONTAINER>(new Guage());
+        case GAUGE32:
+            return std::shared_ptr<BER_CONTAINER>(new Gauge());
         case COUNTER64:
             return std::shared_ptr<BER_CONTAINER>(new Counter64());
         case OPAQUE:

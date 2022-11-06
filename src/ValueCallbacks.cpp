@@ -133,6 +133,7 @@ std::shared_ptr<BER_CONTAINER> ReadOnlyStringCallback::buildTypeWithValue(){
     return std::make_shared<OctetType>(this->value);
 }
 
+
 std::shared_ptr<BER_CONTAINER> OpaqueCallback::buildTypeWithValue(){
     ASSERT_VALID_VALUE(this->value);
 
@@ -172,17 +173,17 @@ SNMP_ERROR_STATUS Counter32Callback::setTypeWithValue(BER_CONTAINER* rawValue){
     return NO_ERROR;
 }
 
-std::shared_ptr<BER_CONTAINER> Guage32Callback::buildTypeWithValue(){
+std::shared_ptr<BER_CONTAINER> Gauge32Callback::buildTypeWithValue(){
     ASSERT_VALID_VALUE(this->value);
 
-    return std::make_shared<Guage>(*this->value);
+    return std::make_shared<Gauge>(*this->value);
 }
 
-SNMP_ERROR_STATUS Guage32Callback::setTypeWithValue(BER_CONTAINER* rawValue){
+SNMP_ERROR_STATUS Gauge32Callback::setTypeWithValue(BER_CONTAINER* rawValue){
     ASSERT_CALLBACK_SETTABLE();
     ASSERT_VALID_SETTABLE_VALUE(this->value);
 
-    Guage* val = static_cast<Guage*>(rawValue);
+    Gauge* val = static_cast<Gauge*>(rawValue);
     *this->value = val->_value;
 
     return NO_ERROR;
@@ -253,6 +254,6 @@ bool remove_handler(std::deque<ValueCallback*>& callbacks, ValueCallback* callba
         callbacks.erase(it);
         return true;
     } else {
-        return true;
+        return false;
     }
 }
