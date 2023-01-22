@@ -29,6 +29,8 @@ This is a fully-compliant SNMPv2c Agent built for Arduino's, but will work on an
   * SNMPv2 Trap
 
 It was designed and tested around an ESP32, but will work with any Arduino-based devied that has a UDP object available.
+For non-ESP Arduino's, you will have to also include this library: https://github.com/mike-matera/ArduinoSTL
+Be careful when using this library on non-ESP Arduino's as they're limited on memory. Try to keep the amount of OID's you add to a minimum.
 
 The example goes into detail around how to use, or look at `src/SNMP_Agent.h` for the API.
 
