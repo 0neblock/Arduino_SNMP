@@ -80,19 +80,19 @@ typedef enum ERROR_STATUS_WITH_VALUE {
 
 #define SNMP_V1_MAX_ERROR GEN_ERR
 
-#define SNMP_ERROR_VERSION_CTRL(error, version) ((version == SNMP_VERSION_1 && error > SNMP_V1_MAX_ERROR) ? SNMP_V1_MAX_ERROR : error)
+#define SNMP_ERROR_VERSION_CTRL(error, version) (((version) == SNMP_VERSION_1 && (error) > SNMP_V1_MAX_ERROR) ? SNMP_V1_MAX_ERROR : (error))
 
 // Used for situations where in V2 an error exists but in V1 a less-specific error exists that isn't GEN_ERR
-#define SNMP_ERROR_VERSION_CTRL_DEF(error, version, elseError) ((version == SNMP_VERSION_1 && error > SNMP_V1_MAX_ERROR) ? SNMP_ERROR_VERSION_CTRL(elseError, version) : error)
+#define SNMP_ERROR_VERSION_CTRL_DEF(error, version, elseError) (((version) == SNMP_VERSION_1 && (error) > SNMP_V1_MAX_ERROR) ? SNMP_ERROR_VERSION_CTRL(elseError, version) : error)
 
 // RFC1213 OIDs
-#define RFC1213_OID_sysDescr            (char*)(".1.3.6.1.2.1.1.1.0")
-#define RFC1213_OID_sysObjectID         (char*)(".1.3.6.1.2.1.1.2.0")
-#define RFC1213_OID_sysUpTime           (char*)(".1.3.6.1.2.1.1.3.0")
-#define RFC1213_OID_sysContact          (char*)(".1.3.6.1.2.1.1.4.0")
-#define RFC1213_OID_sysName             (char*)(".1.3.6.1.2.1.1.5.0")
-#define RFC1213_OID_sysLocation         (char*)(".1.3.6.1.2.1.1.6.0")
-#define RFC1213_OID_sysServices         (char*)(".1.3.6.1.2.1.1.7.0")
+#define RFC1213_OID_sysDescr            (".1.3.6.1.2.1.1.1.0")
+#define RFC1213_OID_sysObjectID         (".1.3.6.1.2.1.1.2.0")
+#define RFC1213_OID_sysUpTime           (".1.3.6.1.2.1.1.3.0")
+#define RFC1213_OID_sysContact          (".1.3.6.1.2.1.1.4.0")
+#define RFC1213_OID_sysName             (".1.3.6.1.2.1.1.5.0")
+#define RFC1213_OID_sysLocation         (".1.3.6.1.2.1.1.6.0")
+#define RFC1213_OID_sysServices         (".1.3.6.1.2.1.1.7.0")
 
 typedef struct RFC1213SystemStruct {
         char*           sysDescr;               /* .1.3.6.1.2.1.1.1.0   Read-only   */

@@ -43,7 +43,7 @@ class SNMPTrap : public SNMPPacket {
     short genericTrap = 6;
     short specificTrap = 1;
     
-    short _TrapUDPport = 162;
+    short trapUDPport = 162;
     
     bool inform = false;
 
@@ -78,7 +78,7 @@ class SNMPTrap : public SNMPPacket {
     }
     
     void setUDPport(short port){
-	_TrapUDPport = port;
+        trapUDPport = port;
     }
     
     void setUDP(UDP* udp){
@@ -137,7 +137,7 @@ class SNMPTrap : public SNMPPacket {
 
         if(length <= 0) return false;
 
-        _udp->beginPacket(ip, _TrapUDPport);
+        _udp->beginPacket(ip, trapUDPport);
         _udp->write(_packetBuffer, length);
         return _udp->endPacket();
     }

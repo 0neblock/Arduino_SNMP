@@ -183,15 +183,15 @@ bool SNMPPacket::build(){
     return true;
 }
 
-void SNMPPacket::setCommunityString(std::string communityString){
+void SNMPPacket::setCommunityString(const std::string &CommunityString){
     // poison any cached containers we have
     this->communityStringPtr = nullptr;
-    this->communityString = communityString;
+    this->communityString = CommunityString;
 }
 
-void SNMPPacket::setRequestID(snmp_request_id_t requestID){
+void SNMPPacket::setRequestID(snmp_request_id_t RequestId){
     this->requestIDPtr = nullptr;
-    this->requestID = requestID;
+    this->requestID = RequestId;
 }
 
 bool SNMPPacket::setPDUType(ASN_TYPE responseType){
@@ -203,9 +203,9 @@ bool SNMPPacket::setPDUType(ASN_TYPE responseType){
     return false;
 }
 
-void SNMPPacket::setVersion(SNMP_VERSION snmpVersion){
+void SNMPPacket::setVersion(SNMP_VERSION SnmpVersion){
     this->snmpVersionPtr = nullptr;
-    this->snmpVersion = snmpVersion;
+    this->snmpVersion = SnmpVersion;
 }
 
 std::shared_ptr<ComplexType> SNMPPacket::generateVarBindList(){

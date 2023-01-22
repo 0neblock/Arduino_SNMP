@@ -33,8 +33,8 @@ typedef enum ASN_TYPE_WITH_VALUE {
     STRUCTURE = 0x30,
     NETWORK_ADDRESS = 0x40,
     COUNTER32 = 0x41,
-    GUAGE32 = 0x42,
-    USIGNED32 = 0x42, // Same as Guage32
+    GAUGE32 = 0x42,
+    USIGNED32 = 0x42, // Same as Gauge32
     TIMESTAMP = 0x43,
     OPAQUE = 0x44,
 	COUNTER64 = 0x46,
@@ -66,20 +66,20 @@ typedef enum ASN_TYPE_WITH_VALUE {
 typedef int SNMP_BUFFER_PARSE_ERROR;
 typedef int SNMP_BUFFER_ENCODE_ERROR;
 
-#define SNMP_BUFFER_ERROR_MAX_LEN_EXCEEDED -1 + SNMP_BUFFER_PARSE_ERROR_OFFSET
-#define SNMP_BUFFER_ERROR_TLV_TOO_SMALL -2 + SNMP_BUFFER_PARSE_ERROR_OFFSET
-#define SNMP_BUFFER_ERROR_PROBLEM_DESERIALISING -3 + SNMP_BUFFER_PARSE_ERROR_OFFSET
-#define SNMP_BUFFER_ERROR_UNKNOWN_TYPE -4 + SNMP_BUFFER_PARSE_ERROR_OFFSET
-#define SNMP_BUFFER_ERROR_TYPE_MISMATCH -5 + SNMP_BUFFER_PARSE_ERROR_OFFSET
-#define SNMP_BUFFER_ERROR_OCTET_TOO_BIG -6 + SNMP_BUFFER_PARSE_ERROR_OFFSET
-#define SNMP_BUFFER_ERROR_INVALID_OID -7 + SNMP_BUFFER_PARSE_ERROR_OFFSET
+#define SNMP_BUFFER_ERROR_MAX_LEN_EXCEEDED (-1 + SNMP_BUFFER_PARSE_ERROR_OFFSET)
+#define SNMP_BUFFER_ERROR_TLV_TOO_SMALL (-2 + SNMP_BUFFER_PARSE_ERROR_OFFSET)
+#define SNMP_BUFFER_ERROR_PROBLEM_DESERIALISING (-3 + SNMP_BUFFER_PARSE_ERROR_OFFSET)
+#define SNMP_BUFFER_ERROR_UNKNOWN_TYPE (-4 + SNMP_BUFFER_PARSE_ERROR_OFFSET)
+#define SNMP_BUFFER_ERROR_TYPE_MISMATCH (-5 + SNMP_BUFFER_PARSE_ERROR_OFFSET)
+#define SNMP_BUFFER_ERROR_OCTET_TOO_BIG (-6 + SNMP_BUFFER_PARSE_ERROR_OFFSET)
+#define SNMP_BUFFER_ERROR_INVALID_OID (-7 + SNMP_BUFFER_PARSE_ERROR_OFFSET)
 
-#define SNMP_BUFFER_ENCODE_ERR_LEN_EXCEEDED -1 + SNMP_BUFFER_ENCODE_ERROR_OFFSET
-#define SNMP_BUFFER_ENCODE_ERROR_INVALID_ITEM -2 + SNMP_BUFFER_ENCODE_ERROR_OFFSET
-#define SNMP_BUFFER_ENCODE_ERROR_INVALID_OID -7 + SNMP_BUFFER_ENCODE_ERROR_OFFSET
+#define SNMP_BUFFER_ENCODE_ERR_LEN_EXCEEDED (-1 + SNMP_BUFFER_ENCODE_ERROR_OFFSET)
+#define SNMP_BUFFER_ENCODE_ERROR_INVALID_ITEM (-2 + SNMP_BUFFER_ENCODE_ERROR_OFFSET)
+#define SNMP_BUFFER_ENCODE_ERROR_INVALID_OID (-7 + SNMP_BUFFER_ENCODE_ERROR_OFFSET)
 
-#define CHECK_DECODE_ERR(i) if(i < 0) return i
-#define CHECK_ENCODE_ERR(i) if(i < 0) return i
+#define CHECK_DECODE_ERR(i) if((i) < 0) return i
+#define CHECK_ENCODE_ERR(i) if((i) < 0) return i
 
 // primitive types inherits straight off the container, complex come off complexType
 // all primitives have to serialiseInto themselves (type, length, data), to be put straight into the packet.
@@ -89,7 +89,7 @@ typedef int SNMP_BUFFER_ENCODE_ERROR;
 class BER_CONTAINER {
   public:
     BER_CONTAINER(ASN_TYPE type) : _type(type){};
-    virtual ~BER_CONTAINER(){};
+    virtual ~BER_CONTAINER()= default;
 
     ASN_TYPE _type;
     int _length = 0;
@@ -287,13 +287,13 @@ class Counter32: public IntegerType {
 
 };
 
-class Guage: public IntegerType { // Unsigned int
+class Gauge: public IntegerType { // Unsigned int
   public:
-    Guage(): IntegerType(){
-        _type = GUAGE32;
+    Gauge(): IntegerType(){
+        _type = GAUGE32;
     };
-    explicit Guage(unsigned int value): IntegerType(value){
-        _type = GUAGE32;
+    explicit Gauge(unsigned int value): IntegerType(value){
+        _type = GAUGE32;
     };
 
 };

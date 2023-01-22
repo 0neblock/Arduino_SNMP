@@ -65,7 +65,7 @@ class SNMPPacket {
     int serialiseInto(uint8_t* buf, size_t max_len);
 
     //TODO: put checks in all these setters
-    void setCommunityString(std::string);
+    void setCommunityString(const std::string &CommunityString);
     void setRequestID(snmp_request_id_t);
     bool setPDUType(ASN_TYPE);
     void setVersion(SNMP_VERSION);
