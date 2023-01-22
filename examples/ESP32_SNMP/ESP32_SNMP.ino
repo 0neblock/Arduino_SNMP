@@ -106,6 +106,28 @@ void setup(){
     snmp.sortHandlers();
 } 
 
+void calbackStatusFunction(SendStatus status)
+{
+    switch (status)
+    {
+    case ssNone:
+        Serial.println("Status: None");
+        break;
+
+    case ssOk:
+        Serial.println("Status: Ok");
+        break;
+
+    case ssError:
+        Serial.println("Status: Error");
+        break;
+
+    default:
+        Serial.println("Status: Unknow");
+        break;
+    }
+}
+
 void loop(){
     snmp.loop(); // must be called as often as possible
     if(settableNumberOID->setOccurred){
@@ -130,7 +152,7 @@ void loop(){
         // Send the trap to the specified IP address
         // If INFORM is set, snmp.loop(); needs to be called in order for the acknowledge mechanism to work.
         IPAddress destinationIP = IPAddress(192, 168, 1, 243);
-        if(snmp.sendTrapTo(settableNumberTrap, destinationIP, true, 2, 5000) != INVALID_SNMP_REQUEST_ID){ 
+        if(snmp.sendTrapTo(settableNumberTrap, destinationIP, calbackStatusFunction, true, 2, 5000) != INVALID_SNMP_REQUEST_ID){ 
             Serial.println("Sent SNMP Trap");
         } else {
             Serial.println("Couldn't send SNMP Trap");

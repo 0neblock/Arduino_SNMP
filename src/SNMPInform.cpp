@@ -23,7 +23,7 @@ static void remove_inform_from_list(std::list<struct InformItem *> &list,
 
 snmp_request_id_t
 queue_and_send_trap(std::list<struct InformItem *> &informList, SNMPTrap *trap, const IPAddress& ip, bool replaceQueuedRequests,
-                    int retries, int delay_ms) {
+                    int retries, int delay_ms, CallbackFunctionSendStatus callbackFunctionSendStatus) {
     bool buildStatus = trap->buildForSending();
     if(!buildStatus) {
         SNMP_LOGW("Couldn't build trap\n");
@@ -34,6 +34,14 @@ queue_and_send_trap(std::list<struct InformItem *> &informList, SNMPTrap *trap, 
     if(replaceQueuedRequests){
         SNMP_LOGD("Removing any outstanding informs for this trap\n");
         remove_inform_from_list(informList, [trap](struct InformItem* informItem) -> bool {
+            if (informItem->callbackFunctionSendStatus){
+                SNMP_LOGD("callbackFunctionSendStatus is set\n");
+                delay(1);//If delete callback not working :(
+                informItem->callbackFunctionSendStatus(ssUnknow);
+            }
+            else{
+                SNMP_LOGW("callbackFunctionSendStatus not set\n");
+            }
             return informItem->trap == trap;
         });
     }
@@ -48,6 +56,7 @@ queue_and_send_trap(std::list<struct InformItem *> &informList, SNMPTrap *trap, 
         item->lastSent = millis();
         item->trap = trap;
         item->missed = false;
+        item->callbackFunctionSendStatus = callbackFunctionSendStatus;
 
         SNMP_LOGD("Adding Inform request to queue: %lu\n", item->requestID);
 
@@ -69,6 +78,14 @@ void inform_callback(std::list<struct InformItem *> &informList, snmp_request_id
     //TODO: if we ever want to keep received informs, change this logic
 
     remove_inform_from_list(informList, [requestID](struct InformItem* informItem) -> bool {
+        if (informItem->callbackFunctionSendStatus){
+            SNMP_LOGD("callbackFunctionSendStatus is set\n");
+            delay(1);//If delete callback not working :(
+            informItem->callbackFunctionSendStatus(ssOk);
+        }
+        else{
+            SNMP_LOGW("callbackFunctionSendStatus not set\n");
+        }
         return informItem->requestID == requestID;
     });
 
@@ -77,6 +94,7 @@ void inform_callback(std::list<struct InformItem *> &informList, snmp_request_id
 
 void handle_inform_queue(std::list<struct InformItem *> &informList) {
     auto thisLoop = millis();
+    bool flagRemove = false;
     for(auto informItem : informList){
         if(!informItem->received && thisLoop - informItem->lastSent > informItem->delay_ms){
             SNMP_LOGD("Missed Inform receive\n");
@@ -84,6 +102,7 @@ void handle_inform_queue(std::list<struct InformItem *> &informList) {
             informItem->missed = true;
             if(!informItem->retries){
                 SNMP_LOGD("No more retries for inform: %lu, removing\n", informItem->requestID);
+                flagRemove = true;
                 continue;
             }
             if(informItem->trap){
@@ -95,7 +114,15 @@ void handle_inform_queue(std::list<struct InformItem *> &informList) {
             }
         }
     }
-    remove_inform_from_list(informList, [](struct InformItem* informItem) -> bool {
+    if (flagRemove) remove_inform_from_list(informList, [](struct InformItem* informItem) -> bool {
+        if (informItem->callbackFunctionSendStatus){
+            SNMP_LOGD("callbackFunctionSendStatus is set\n");
+            delay(1);//If delete callback not working :(
+            informItem->callbackFunctionSendStatus(ssError);
+        }
+        else{
+            SNMP_LOGW("callbackFunctionSendStatus not set\n");
+        }
         return informItem->received || (informItem->retries == 0 && informItem->missed);
     });
 }
@@ -103,6 +130,14 @@ void handle_inform_queue(std::list<struct InformItem *> &informList) {
 void mark_trap_deleted(std::list<struct InformItem *> &informList, SNMPTrap *trap) {
     SNMP_LOGD("Removing waiting Informs tied to Trap.\n");
     remove_inform_from_list(informList, [trap](struct InformItem* informItem) -> bool {
+        if (informItem->callbackFunctionSendStatus){
+            SNMP_LOGD("callbackFunctionSendStatus is set\n");
+            delay(1);//If delete callback not working :(
+            informItem->callbackFunctionSendStatus(ssUnknow);
+        }
+        else{
+            SNMP_LOGW("callbackFunctionSendStatus not set\n");
+        }
         return informItem->trap == trap;
     });
 }

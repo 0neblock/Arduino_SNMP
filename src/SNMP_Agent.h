@@ -97,7 +97,7 @@ class SNMPAgent {
         bool removeHandler(ValueCallback* callback);
         bool sortHandlers();
 
-        snmp_request_id_t sendTrapTo(SNMPTrap* trap, const IPAddress& ip, bool replaceQueuedRequests = true, int retries = 0, int delay_ms = 30000);
+        snmp_request_id_t sendTrapTo(SNMPTrap* trap, const IPAddress& ip, CallbackFunctionSendStatus callbackFunctionSendStatus, bool replaceQueuedRequests = true, int retries = 0, int delay_ms = 30000);
         static void markTrapDeleted(SNMPTrap* trap);
         
     private:
