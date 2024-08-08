@@ -68,19 +68,18 @@ class SNMPAgent {
         ValueCallback* addCounter64Handler(const char *oid, uint64_t* value, bool overwritePrefix = false);
         ValueCallback* addCounter32Handler(const char *oid, uint32_t* value, bool overwritePrefix = false);
         ValueCallback* addGaugeHandler(const char *oid, uint32_t* value, bool overwritePrefix = false);
+        ValueCallback* addIPAddressHandler(const char *oid, IPAddress* value, bool isSettable = false, bool overwritePrefix = false);
+
         // Depreciated, use addGaugeHandler()
         __attribute__((deprecated)) ValueCallback* addGuageHandler(const char *oid, uint32_t* value, bool overwritePrefix = false) {
             return addGaugeHandler(oid, value, overwritePrefix);
         }
 
-        void
-        setUDP(UDP* udp);
+        void setUDP(UDP* udp);
         bool restartUDP();
 
-        void
-        begin();
-        void
-        begin(const char* oidPrefix);
+        void begin();
+        void begin(const char* oidPrefix);
         void stop();
 	    enum SNMP_ERROR_RESPONSE loop();
         
