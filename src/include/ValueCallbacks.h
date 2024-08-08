@@ -226,4 +226,15 @@ class Counter64Callback: public ValueCallback {
     SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER* value) override;
 };
 
+class NetworkAddressCallback: public ValueCallback {
+  public:
+    NetworkAddressCallback(SortableOIDType* oid, IPAddress* value): ValueCallback(oid, NETWORK_ADDRESS), value(value) {};
+
+  protected:
+    IPAddress* const value;
+
+    std::shared_ptr<BER_CONTAINER> buildTypeWithValue() override;
+    SNMP_ERROR_STATUS setTypeWithValue(BER_CONTAINER* value) override;
+};
+
 #endif
