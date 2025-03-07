@@ -55,14 +55,8 @@ int NetworkAddress::fromBuffer(const uint8_t *buf, size_t max_len){
     int i = BER_CONTAINER::fromBuffer(buf, max_len);
     CHECK_DECODE_ERR(i);
     const uint8_t* ptr = buf + i;
-
-    // byte tempAddress[4];
-    // tempAddress[0] = *ptr++;
-    // tempAddress[1] = *ptr++;
-    // tempAddress[2] = *ptr++;
-    // tempAddress[3] = *ptr++;
-
     _value = IPAddress(ptr);
+    ptr += 4;
     return ptr - buf;
 }
 
