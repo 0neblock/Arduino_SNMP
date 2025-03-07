@@ -61,15 +61,18 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
 
     SECTION( "Should fail to parse a corrupt buffer "){
         SNMPPacket* readPacket = new SNMPPacket();
-        for(int i = 25; i < 133; i+= 10){
-            char old[10] = {0};
-            memcpy(old, &buffer[i], 10);
-            long randomLong = random();
-            memcpy(&buffer[i], &randomLong, 10);
+        uint8_t random_arr[] = {35, 147, 95, 195, 124, 200, 244, 76, 255, 241, 35, 147, 95, 255, 241, 35};
+        uint8_t old[sizeof(random_arr)] = {0};
+        for(int i = 25; i < 133; i+= sizeof(random_arr)){
+            memcpy(old, &buffer[i], sizeof(random_arr));
+
+            memcpy(&buffer[i], &random_arr, sizeof(random_arr));
+
             // This may SOMETIMES fail if the random gets lucky and makes something valid
+            INFO("The number is " << i);
             REQUIRE( readPacket->parseFrom(buffer, 200) != SNMP_ERROR_OK );
 
-            memcpy(&buffer[i], old, 10);
+            memcpy(&buffer[i], old, sizeof(random_arr));
             REQUIRE( readPacket->parseFrom(buffer, 200) == SNMP_ERROR_OK );
         }
     }
