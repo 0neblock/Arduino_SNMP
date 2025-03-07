@@ -126,6 +126,29 @@ TEST_CASE( "Test Encoding/Decoding packet", "[snmp]" ) {
         REQUIRE( std::static_pointer_cast<IntegerType>(packet->varbindList[4].value)->_value == -420000 );
 }
 
+TEST_CASE( "Test Get IpAdress value", "[snmp]" ) {
+    std::deque<ValueCallback*> callbacks;
+    IPAddress ip_addr = IPAddress(1,2,3,4);
+    ValueCallback* ip_addr_callback = new NetworkAddressCallback(new SortableOIDType(".1.3.6.1.4.1.5.1"), &ip_addr);
+    callbacks.push_back(ip_addr_callback);
+
+    SNMPPacket* requestPacket = new SNMPPacket();
+    requestPacket->setPDUType(GetRequestPDU);
+    requestPacket->setCommunityString("public");
+    requestPacket->setRequestID(random());
+    requestPacket->setVersion(SNMP_VERSION_1);
+    requestPacket->varbindList.push_back(VarBind(std::make_shared<SortableOIDType>(".1.3.6.1.4.1.5.1"), std::make_shared<NetworkAddress>(IPAddress(0,0,0,0))));
+    uint8_t buffer[500];
+    int requestLength = requestPacket->serialiseInto(buffer, 500);
+    REQUIRE( requestLength > 0 );
+    int responseLength;
+    REQUIRE( handlePacket(buffer, requestLength, &responseLength, 500, callbacks, (char*)"public", (char*)"private") == SNMP_GET_OCCURRED );
+    SNMPPacket* responsePacket = new SNMPPacket();
+    REQUIRE( responsePacket->parseFrom(buffer, responseLength) == SNMP_ERROR_OK );
+    REQUIRE( responsePacket->varbindList.at(0).type == NETWORK_ADDRESS );
+    REQUIRE( std::static_pointer_cast<NetworkAddress>(responsePacket->varbindList.at(0).value)->_value == ip_addr );
+}
+
 TEST_CASE( "Test GetRequestPDU", "[snmp]" ){
     std::deque<ValueCallback*> callbacks;
 
@@ -263,6 +286,27 @@ TEST_CASE( "Test SetRequestPDU", "[snmp]" ){
 
 }
 
+TEST_CASE( "Test Set IpAdress value", "[snmp]" ) {
+    std::deque<ValueCallback*> callbacks;
+    IPAddress ip_addr = IPAddress(1,2,3,4);
+    ValueCallback* ip_addr_callback = new NetworkAddressCallback(new SortableOIDType(".1.3.6.1.4.1.5.1"), &ip_addr);
+    ip_addr_callback->isSettable = true;
+    callbacks.push_back(ip_addr_callback);
+
+    SNMPPacket* requestPacket = new SNMPPacket();
+    requestPacket->setPDUType(SetRequestPDU);
+    requestPacket->setCommunityString("public");
+    requestPacket->setRequestID(random());
+    requestPacket->setVersion(SNMP_VERSION_1);
+    IPAddress set_ip_addr = IPAddress(5,6,7,8);
+    requestPacket->varbindList.push_back(VarBind(std::make_shared<SortableOIDType>(".1.3.6.1.4.1.5.1"), std::make_shared<NetworkAddress>(set_ip_addr)));
+    uint8_t buffer[500];
+    int requestLength = requestPacket->serialiseInto(buffer, 500);
+    REQUIRE( requestLength > 0 );
+    int responseLength;
+    REQUIRE( handlePacket(buffer, requestLength, &responseLength, 500, callbacks, (char*)"public", (char*)"public") == SNMP_SET_OCCURRED );
+    REQUIRE( ip_addr == set_ip_addr );
+}
 
 TEST_CASE( "sort/remove handlers ", "[snmp]"){
     std::deque<ValueCallback*> callbacks;
