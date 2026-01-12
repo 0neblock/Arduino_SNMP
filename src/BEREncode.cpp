@@ -21,7 +21,7 @@ static size_t encode_ber_length_integer(uint8_t* buf, size_t integer, int){
     if(integer < 128){
         *buf = integer & 0xFF;
     } else {
-        if(integer > 256){
+        if(integer >= 256){
             *buf++ = (2 | 0x80) & 0xFF;
             *buf++ = integer/256;
             bytes_used += 2;
@@ -37,7 +37,7 @@ static size_t encode_ber_length_integer(uint8_t* buf, size_t integer, int){
 static size_t encode_ber_length_integer_count(size_t integer){
     int bytes_used = 1;
     if(integer >= 128){
-        if(integer > 256){
+        if(integer >= 256){
             bytes_used += 2;
         } else {
             bytes_used++;
