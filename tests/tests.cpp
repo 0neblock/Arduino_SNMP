@@ -65,7 +65,7 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
             char old[10] = {0};
             memcpy(old, &buffer[i], 10);
             long randomLong = random();
-            memcpy(&buffer[i], &randomLong, 10);
+            memcpy(&buffer[i], &randomLong, sizeof(randomLong));
             // This may SOMETIMES fail if the random gets lucky and makes something valid
             REQUIRE( readPacket->parseFrom(buffer, 200) != SNMP_ERROR_OK );
 
