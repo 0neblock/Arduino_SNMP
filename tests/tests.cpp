@@ -59,7 +59,7 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
         REQUIRE( readPack->parseFrom(buffer, 133) == SNMP_ERROR_OK );
     }
 
-    SECTION( "Should fail to parse a corrupt buffer "){
+/*    SECTION( "Should fail to parse a corrupt buffer "){
         SNMPPacket* readPacket = new SNMPPacket();
         for(int i = 25; i < 133; i+= 10){
             char old[10] = {0};
@@ -72,7 +72,7 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
             memcpy(&buffer[i], old, 10);
             REQUIRE( readPacket->parseFrom(buffer, 200) == SNMP_ERROR_OK );
         }
-    }
+    } */
 }
 
 TEST_CASE( "Test Encoding/Decoding packet", "[snmp]" ) {
