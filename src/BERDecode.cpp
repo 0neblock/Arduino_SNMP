@@ -89,7 +89,7 @@ int IntegerType::fromBuffer(const uint8_t *buf, size_t max_len){
         break;
         case 3:
             if(tempVal & 0x00800000){
-                tempVal = tempVal |= 0xFF000000;
+                tempVal |= 0xFF000000;
             }
             _value = (int32_t)tempVal;
         break;
