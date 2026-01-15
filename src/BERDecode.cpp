@@ -89,7 +89,7 @@ int IntegerType::fromBuffer(const uint8_t *buf, size_t max_len){
         break;
         case 3:
             if(tempVal & 0x00800000){
-                tempVal = tempVal |= 0xFF000000;
+                tempVal |= 0xFF000000;
             }
             _value = (int32_t)tempVal;
         break;
@@ -133,7 +133,7 @@ int OIDType::fromBuffer(const uint8_t *buf, size_t max_len){
     this->data.assign(dataPtr, dataPtr + _length);
     this->valid = true;
 
-    return _length + 2;
+    return _length + j;
 }
 
 static inline void long_to_buf(char* buf, long l, short r = 0){
@@ -208,7 +208,7 @@ int Counter64::fromBuffer(const uint8_t *buf, size_t max_len){
         _value = _value | *ptr++;
         tempLength--;
     }
-    return _length + 2;
+    return _length + i;
 }
 
 std::shared_ptr<BER_CONTAINER> ComplexType::createObjectForType(ASN_TYPE valueType){
@@ -290,5 +290,5 @@ int ComplexType::fromBuffer(const uint8_t *buf, size_t max_len){
         ptr += used_length; 
         i += used_length;
     }
-    return _length + 2;
+    return _length + j;
 }
