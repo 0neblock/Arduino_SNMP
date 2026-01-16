@@ -128,10 +128,21 @@ class IntegerType: public BER_CONTAINER {
     };
 
     int _value = 0;
+    int _knownLen = 4;
 
 protected:
     int serialise(uint8_t* buf, size_t max_len) override;
     int fromBuffer(const uint8_t *buf, size_t max_len) override;
+};
+
+class ByteType: public IntegerType {
+  public:
+    ByteType(): IntegerType() {
+        _knownLen = 1;
+    };
+    explicit ByteType(uint8_t value): IntegerType(value) {
+        _knownLen = 1;
+    };
 };
 
 class TimestampType: public IntegerType {

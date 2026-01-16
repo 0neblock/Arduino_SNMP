@@ -72,7 +72,8 @@ int IntegerType::fromBuffer(const uint8_t *buf, size_t max_len){
     const uint8_t* ptr = buf + i;
 
     unsigned short tempLength = _length;
-    uint32_t tempVal = 0; 
+    _knownLen = _length;
+    uint32_t tempVal = 0;
 
     while(tempLength > 0){
         tempVal = tempVal << 8;

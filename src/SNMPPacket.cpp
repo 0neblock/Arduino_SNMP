@@ -43,7 +43,7 @@ SNMP_PACKET_PARSE_ERROR SNMPPacket::parsePacket(ComplexType *structure, enum SNM
 
             case SNMPVERSION:
                 ASSERT_ASN_STATE_TYPE(value, SNMPVERSION);
-                this->snmpVersionPtr = std::static_pointer_cast<IntegerType>(value);
+                this->snmpVersionPtr = std::static_pointer_cast<ByteType>(value);
                 this->snmpVersion = (SNMP_VERSION) this->snmpVersionPtr.get()->_value;
                 if (this->snmpVersion >= SNMP_VERSION_MAX) {
                     SNMP_LOGW("Invalid SNMP Version: %d\n", this->snmpVersion);
@@ -154,7 +154,7 @@ bool SNMPPacket::build(){
     if(this->snmpVersionPtr)
         this->packet->addValueToList(this->snmpVersionPtr);
     else
-        this->packet->addValueToList(std::make_shared<IntegerType>(this->snmpVersion));
+        this->packet->addValueToList(std::make_shared<ByteType>(this->snmpVersion));
 
     if(this->communityStringPtr)
         this->packet->addValueToList(this->communityStringPtr);
@@ -168,9 +168,8 @@ bool SNMPPacket::build(){
     else
         snmpPDU->addValueToList(std::make_shared<IntegerType>(this->requestID));
 
-
-    snmpPDU->addValueToList(std::make_shared<IntegerType>(this->errorStatus.errorStatus));
-    snmpPDU->addValueToList(std::make_shared<IntegerType>(this->errorIndex.errorIndex));
+    snmpPDU->addValueToList(std::make_shared<ByteType>(this->errorStatus.errorStatus));
+    snmpPDU->addValueToList(std::make_shared<ByteType>(this->errorIndex.errorIndex));
 
     // We need to do this dynamically incase we're building a trap, generateVarBindList is virtual
     auto varBindList = this->generateVarBindList();

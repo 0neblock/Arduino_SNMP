@@ -74,13 +74,22 @@ int NetworkAddress::serialise(uint8_t* buf, size_t max_len){
 }
 
 int IntegerType::serialise(uint8_t* buf, size_t max_len){
-    int i = BER_CONTAINER::serialise(buf, max_len, 4);
+    int i = BER_CONTAINER::serialise(buf, max_len, _knownLen);
     CHECK_ENCODE_ERR(i);
     uint8_t *ptr = buf + i;
 
-    *ptr++ = _value >> 24 & 0xFF;
-    *ptr++ = _value >> 16 & 0xFF;
-    *ptr++ = _value >> 8 & 0xFF;
+    if (_knownLen >= 4) {
+        *ptr++ = _value >> 24 & 0xFF;
+    }
+
+    if (_knownLen >= 3) {
+        *ptr++ = _value >> 16 & 0xFF;
+    }
+
+    if (_knownLen >= 2) {
+        *ptr++ = _value >> 8 & 0xFF;
+    }
+
     *ptr++ = _value & 0xFF;
     
     return ptr - buf;
