@@ -73,7 +73,7 @@ class SNMPPacket {
     bool reuse = false;
 
     std::shared_ptr<IntegerType> requestIDPtr = nullptr;
-    std::shared_ptr<IntegerType> snmpVersionPtr = nullptr;
+    std::shared_ptr<ByteType> snmpVersionPtr = nullptr;
     std::shared_ptr<OctetType> communityStringPtr = nullptr;
 
     snmp_request_id_t requestID = 0;

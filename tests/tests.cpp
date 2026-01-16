@@ -4,10 +4,10 @@
 #include "include/SNMPPacket.h"
 #include "include/ValueCallbacks.h"
 #include "include/SNMPParser.h"
-
 #include "SNMPTrap.h"
-
 #include <list>
+
+const int expected_length = 123; // expected length of GenerateTestSNMPRequestPacket()
 
 static SNMPPacket* GenerateTestSNMPRequestPacket(){
     SNMPPacket* packet = new SNMPPacket();
@@ -32,13 +32,13 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
     int serialised_length = 0;
 
     SECTION( "Failed Serialisation" ){
-        serialised_length = packet->serialiseInto(buffer, 132);
+        serialised_length = packet->serialiseInto(buffer, expected_length - 1);
         REQUIRE( serialised_length <= 0 );
     }
 
     SECTION( "Suceed Serialisation" ){
-        serialised_length = packet->serialiseInto(buffer, 133);
-        REQUIRE( serialised_length == 133 );
+        serialised_length = packet->serialiseInto(buffer, expected_length);
+        REQUIRE( serialised_length == expected_length );
     }
 
     uint8_t copyBuffer[500] = {0};
@@ -47,7 +47,7 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
 
     SECTION( "Should fail to parse a buffer too small"){
         SNMPPacket* readPack = new SNMPPacket();
-        REQUIRE( readPack->parseFrom(buffer, 130) != SNMP_ERROR_OK );
+        REQUIRE( readPack->parseFrom(buffer, expected_length - 1) != SNMP_ERROR_OK );
     }
 
     SECTION( "Decoding should not modify the buffer"){
@@ -56,12 +56,12 @@ TEST_CASE( "Test handle failures when Encoding/Decoding", "[snmp]"){
     
     SECTION( "Should be able to reparse the buffer with correct max_size"){
         SNMPPacket* readPack = new SNMPPacket();
-        REQUIRE( readPack->parseFrom(buffer, 133) == SNMP_ERROR_OK );
+        REQUIRE( readPack->parseFrom(buffer, expected_length) == SNMP_ERROR_OK );
     }
 
 /*    SECTION( "Should fail to parse a corrupt buffer "){
         SNMPPacket* readPacket = new SNMPPacket();
-        for(int i = 25; i < 133; i+= 10){
+        for(int i = 25; i < expected_length; i+= 10){
             char old[10] = {0};
             memcpy(old, &buffer[i], 10);
             long randomLong = random();
@@ -83,7 +83,7 @@ TEST_CASE( "Test Encoding/Decoding packet", "[snmp]" ) {
 
     SECTION( "Serialisation" ){
         serialised_length = packet->serialiseInto(buffer, 500);
-        REQUIRE( serialised_length == 133 );
+        REQUIRE( serialised_length == expected_length );
     }
     // Read packet
     SNMPPacket* readPacket = new SNMPPacket();
