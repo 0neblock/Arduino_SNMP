@@ -190,6 +190,14 @@ ValueCallback* SNMPAgent::addGaugeHandler(const char *oid, uint32_t* value, bool
     return addHandler(new Gauge32Callback(oidType, value), false);
 }
 
+ValueCallback* addIPAddressHandler(const char *oid, IPAddress* value, bool isSettable, bool overwritePrefix){
+    if(!value) return nullptr;
+
+    SortableOIDType* oidType = buildOIDWithPrefix(oid, overwritePrefix);
+    if(!oidType) return nullptr;
+    return addHandler(new NetworkAddressCallback(oidType, value), false);
+}
+
 ValueCallback * SNMPAgent::addHandler(ValueCallback *callback, bool isSettable) {
     callback->isSettable = isSettable;
     this->callbacks.push_back(callback);
