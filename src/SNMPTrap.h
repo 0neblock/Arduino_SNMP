@@ -148,7 +148,7 @@ class SNMPTrap : public SNMPPacket {
     std::shared_ptr<ComplexType> generateVarBindList() override;
 
     OIDType* timestampOID = new OIDType(".1.3.6.1.2.1.1.3.0");
-    OIDType* snmpTrapOID  = new OIDType(".1.3.6.1.2.1.1.2.0");
+    OIDType* snmpTrapOID  = new OIDType(".1.3.6.1.6.3.1.1.4.1.0");
 
     bool build() override;
 };
